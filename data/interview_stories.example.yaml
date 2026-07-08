@@ -1,0 +1,131 @@
+# Example interview stories (RU + EN)
+#
+# All stories live under `stories:` — required for seed_profile import.
+# Replace fictional project names (ShopStream, Example Corp) with your real ones.
+
+stories:
+  origin_story:
+    question_patterns:
+      - "Tell me about yourself"
+      - "How did you get into QA?"
+      - "Why testing?"
+      - "Расскажи о себе"
+    answer_ru: >
+      Я пришёл в QA, когда на проекте не было отдельного тестировщика. Мне стало
+      интересно разбираться в качестве продукта, я изучил практики тестирования,
+      улучшил workflow и решил развиваться в QA профессионально.
+    answer_en: >
+      I moved into QA when my team had no dedicated tester. I took ownership of
+      quality, studied testing practices, improved the workflow with better methods
+      and tools, and decided to grow professionally in software testing.
+
+  interesting_bug_search_filters:
+    question_patterns:
+      - "Tell me about an interesting bug"
+      - "What bug are you proud of finding?"
+      - "Describe a complex issue you investigated"
+      - "Расскажи про интересный баг"
+    answer_ru: >
+      На проекте ShopStream пользователи выбирали несколько фильтров поиска, но
+      получали неверные результаты. Я воспроизвёл сценарий, проверил HTTP-запросы
+      и выяснил, что фильтры применялись в неправильном порядке на сервере. После
+      фикса провёл повторную проверку и подтвердил корректность выдачи.
+    answer_en: >
+      On ShopStream, users selected multiple search filters but received incorrect
+      results. I reproduced the issue, traced HTTP requests and found that filters
+      were applied in the wrong order on the server. After the fix I retested the
+      flow and confirmed correct search behavior.
+
+  regression_systematization:
+    question_patterns:
+      - "Tell me about process improvement"
+      - "How did you improve regression testing?"
+      - "What is your impact on the QA process?"
+    answer_ru: >
+      На ShopStream регресс был разрозненным: часть кейсов устарела, часть
+      дублировалась. Я провёл аудит, структурировал кейсы по модулям, ввел
+      единый шаблон и приоритизацию критичных сценариев. Регресс стал быстрее
+      и понятнее перед релизами.
+    answer_en: >
+      On ShopStream, regression was scattered: some cases were outdated or duplicated.
+      I audited the suite, structured cases by modules, introduced a consistent
+      template and prioritized critical flows. Regression became faster and clearer
+      before releases.
+
+  project_shopstream:
+    question_patterns:
+      - "Tell me about your project"
+      - "What did you test?"
+      - "Расскажи про проект"
+    answer_ru: >
+      ShopStream — B2C e-commerce: каталог, корзина, checkout, платежи и
+      уведомления. Технически — React, Node.js, PostgreSQL, REST API. Я тестировал
+      web и mobile, API, БД, интеграции, checkout и регресс перед релизами.
+    answer_en: >
+      ShopStream was a B2C e-commerce platform: catalog, cart, checkout, payments
+      and notifications. Technically it used React, Node.js, PostgreSQL and REST API.
+      I tested web and mobile flows, API, database behavior, integrations, checkout
+      and regression before releases.
+
+  current_project_overview:
+    question_patterns:
+      - "Tell me about your current project"
+      - "What are you doing now?"
+      - "What is your current FinTech project about?"
+      - "Расскажи про текущий проект"
+    answer_ru: >
+      С начала 2024 я работаю на проекте миграции данных из legacy-монолита в
+      микросервисную платформу. Я проверяю корректность миграции, доставку сообщений,
+      обработку сервисами-приёмниками, состояние БД и сценарии отката.
+    answer_en: >
+      Since early 2024 I have worked on a data migration project from a legacy
+      monolith to a microservice platform. I validate migration correctness, message
+      delivery, receiver processing, database state and rollback scenarios.
+
+  message_broker_and_data_checks:
+    question_patterns:
+      - "How do you test integrations?"
+      - "What do you check in the message broker?"
+      - "How do you validate migrated data?"
+      - "Как ты тестируешь интеграции?"
+    answer_ru: >
+      Я проверяю не только доставку сообщений, но и их содержание: данные из
+      источника должны корректно попасть в сообщение и обработаться сервисом-приёмником.
+      Для расследований использую SQL/DBeaver: смотрю логи, сшиваю записи по ID
+      сообщения и локализую проблему на источнике, в брокере или в конкретном сервисе.
+    answer_en: >
+      I check not only message delivery but also content: source data must appear
+      correctly in the message and be processed by receiving services. For investigations
+      I use SQL/DBeaver to review logs, join records by message ID and localize issues
+      on the source side, in the broker or in a specific receiver.
+
+  rollback_bug:
+    question_patterns:
+      - "Tell me about a complex bug"
+      - "Describe a bug you are proud of finding"
+      - "Tell me about a conflict with another team"
+      - "Расскажи про сложный баг"
+    answer_ru: >
+      Один сложный баг был связан с откатом миграции: сервис-приёмник не удалял
+      записи из БД при rollback, но и не возвращал явную ошибку. Из-за этого
+      тестовые данные портились. Я собрал цепочку сообщений, сравнил состояние БД
+      до и после отката и показал, что проблема в обработке rollback на стороне сервиса.
+    answer_en: >
+      One complex bug involved migration rollback: a receiving service did not delete
+      records on rollback but also did not return an explicit error, corrupting test
+      data. I analyzed the message chain, compared database state before and after
+      rollback and demonstrated the issue was in the service's rollback handling.
+
+  cross_team_collaboration:
+    question_patterns:
+      - "How do you work with other teams?"
+      - "Describe cross-team collaboration"
+      - "Как ты работаешь с другими командами?"
+    answer_ru: >
+      Команды микросервисов часто просят подготовленные мигрированные данные для
+      своих тестов. Я помогаю создать данные на legacy-стороне, запустить миграцию,
+      разобрать ошибки и объяснить, где смотреть логи и как читать цепочку сообщений.
+    answer_en: >
+      Microservice teams often need prepared migrated data for their own testing.
+      I help create source data, run migrations, investigate errors and explain where
+      to check logs and how to read the message flow.

@@ -1,0 +1,340 @@
+# Example candidate profile
+#
+# Copy to candidate_profile.yaml and replace every placeholder with your real data.
+# See data/README.md and: python scripts/setup_profile_data.py
+
+identity:
+  preferred_name: "Alex Doe"
+  legal_name: "Alex Doe"
+  current_title: "Middle QA Engineer"
+  target_title: "QA Automation Engineer / SDET"
+  current_location: "Berlin, Germany"
+  open_to_relocation: true
+  preferred_locations:
+    - "Netherlands"
+    - "Germany"
+    - "Remote EU"
+
+positioning:
+  conservative:
+    title: "Middle QA Engineer / API QA Engineer"
+    use_for:
+      - "Manual QA"
+      - "API QA"
+      - "FinTech QA"
+      - "Web and mobile QA"
+  growth:
+    title: "QA Automation Engineer / SDET"
+    use_for:
+      - "Java QA Automation"
+      - "SDET with API focus"
+      - "Automation roles where strong manual/API QA background is valuable"
+
+role_boundaries:
+  is_not:
+    - "Software developer / backend developer"
+    - "Team lead / engineering manager"
+    - "People manager of developers"
+  target_roles:
+    - "QA Engineer"
+    - "Manual QA"
+    - "API QA"
+    - "QA Automation Engineer"
+    - "SDET"
+  note: >
+    Testing a product as QA is not the same as years of developer experience.
+    Do not match developer or team-lead vacancies unless the posting explicitly
+    accepts QA background.
+
+professional_summary:
+  short: >
+    Middle QA Engineer with 5+ years in web, mobile, API, backend/frontend,
+    database and FinTech testing, growing toward QA Automation / SDET with
+    Java-based automation.
+  origin_story: >
+    I moved into QA when a product team had no dedicated tester. I took ownership
+    of quality, studied testing practices, improved the workflow with better methods
+    and tools, and decided to grow professionally in software testing.
+
+experience:
+  total_qa_years: "5+"
+  current_level: "Middle"
+  automation_level: "Growing — confirm depth before using in applications"
+  strong_domains:
+    - "FinTech"
+    - "Enterprise systems"
+    - "Web platforms"
+    - "Mobile applications"
+    - "API and integration testing"
+    - "Database validation"
+    - "Message-based integration testing"
+    - "Data migration QA"
+
+projects:
+  shopstream:
+    business_description: >
+      ShopStream was a B2C e-commerce platform for online retail: product catalog,
+      search, cart, checkout, payments, order tracking and customer notifications.
+    technical_description: >
+      Web platform with React frontend, Node.js backend, PostgreSQL, REST API and
+      integrations with payment providers and email services.
+    architecture:
+      frontend: "React"
+      backend: "Node.js"
+      database: "PostgreSQL"
+      api: "REST API"
+      architecture_type: "Modular / multi-service — adjust wording before interview"
+    services_tested:
+      - "Catalog Service: products, categories, availability"
+      - "Cart Service: add/remove items, pricing rules"
+      - "Checkout Service: order creation, validation"
+      - "Payment Service: payment and refund flows"
+      - "Notification Service: email confirmations"
+    integrations:
+      internal:
+        - "Catalog ↔ Cart ↔ Checkout"
+        - "Payment gateway adapter"
+      external:
+        - "Stripe (example payment provider)"
+        - "SendGrid (example email provider)"
+    environments:
+      - "Development: daily feature testing"
+      - "Staging: regression before release"
+      - "Production: smoke checks after release"
+    documentation:
+      test_management: "TestRail"
+      requirements: "Confluence"
+      bug_tracking: "Jira"
+    team:
+      - "Product Manager"
+      - "Team Lead"
+      - "Frontend developers"
+      - "Backend developers"
+      - "QA Lead"
+      - "One automation QA"
+      - "Two manual QA engineers including me"
+    process:
+      methodology: "Scrum"
+      sprint_length: "2 weeks"
+      ceremonies:
+        - "Sprint Planning"
+        - "Daily Standups"
+        - "Regression testing"
+        - "Sprint Review"
+        - "Retrospective"
+
+current_project_details:
+  novapay_migration:
+    status: "example_template — replace with your real project data"
+    company: "Example Corp"
+    since: "2024-01"
+    role: "Middle QA Engineer"
+    domain: "FinTech / data migration / enterprise integration"
+    public_summary: >
+      FinTech data migration project from a legacy monolithic core system to a
+      new internal microservice platform through a message broker.
+    responsibilities:
+      - "Migration testing between legacy system and receiving microservices"
+      - "Message flow validation"
+      - "Database and log investigation through DBeaver"
+      - "Test data preparation on the legacy side"
+      - "Rollback validation"
+      - "Retesting fixes"
+      - "Release test plan preparation"
+    strengths:
+      - "Integration testing"
+      - "Data migration QA"
+      - "FinTech domain"
+      - "Message broker testing"
+      - "Database investigation"
+    nda_policy:
+      public_safe_wording: >
+        FinTech data migration from a legacy monolithic core to a microservice
+        platform through a message broker.
+      private_notes: >
+        Use internal codenames only in private files. For public resumes and
+        LinkedIn, prefer generic wording: legacy core system, message broker,
+        target microservices, collateral service, account service, ledger service.
+      avoid_in_public:
+        - "Exact client name"
+        - "Exact internal project/system names unless confirmed safe"
+        - "Exact service names if they may be covered by NDA"
+        - "Production migration details that reveal sensitive flows"
+    project_summary:
+      ru_public: >
+        Текущий проект — миграция финансовых данных из legacy-монолита в новую
+        внутреннюю микросервисную платформу. Система выступает мостом: данные
+        выбираются из БД источника, передаются через брокер сообщений и
+        раскладываются по сервисам-приёмникам.
+      en_public: >
+        My current project is a FinTech data migration initiative: entities are
+        migrated from a legacy monolithic core to a new internal microservice
+        platform. The system acts as a bridge — data is selected from the source
+        database, transferred through a message broker and persisted in receiving
+        services.
+    business_context:
+      product_type: "Internal FinTech product"
+      domain:
+        - "Accounts"
+        - "Transactions"
+        - "Customer agreements"
+        - "Data migration"
+      likely_users:
+        - "Migration team"
+        - "QA teams of receiving microservices"
+        - "Analysts and developers involved in migration"
+      user_note: >
+        Migration and adjacent microservice teams depend on prepared migrated data
+        for testing and production cutover activities.
+    architecture:
+      type: "Bridge between legacy monolith and microservice ecosystem"
+      source_system:
+        public_name: "Legacy monolithic core"
+        private_name: "LegacyCore (internal codename)"
+        description: >
+          Legacy monolithic system that stores source account and transaction data.
+      transport:
+        name: "Message broker (Kafka-style)"
+        description: >
+          Main communication layer between the legacy core and target microservices.
+          Migration messages are published to topics and consumed by receivers.
+      target_platform:
+        public_name: "New internal microservice platform"
+        private_name: "NovaPlatform (internal codename)"
+        description: >
+          Network of microservices responsible for storing and processing migrated data.
+      target_services_private:
+        - "CollateralSvc"
+        - "AgreementSvc"
+        - "WriteOffSvc"
+        - "LedgerSvc"
+        - "AccountGenSvc"
+      target_services_public:
+        - "Collateral-related service"
+        - "Agreement data service"
+        - "Write-off service"
+        - "General ledger service"
+        - "Account generation service"
+    my_scope:
+      ru: >
+        Я тестирую миграцию между legacy-системой и микросервисами: проверяю
+        корректность данных источника, доставку сообщений, обработку сервисами-
+        приёмниками, сохранение в БД и откат миграции. Дополнительно готовлю
+        тестовые данные на стороне legacy-системы для команд микросервисов.
+      en: >
+        I test migration between the legacy core and target microservices: source
+        data correctness, message delivery, receiver processing, database persistence
+        and rollback behavior. I also prepare test data on the legacy side for
+        adjacent microservice teams.
+    main_weekly_tasks:
+      - "Run migrations on different environments"
+      - "Investigate migration errors"
+      - "Prepare test data in the legacy system"
+      - "Retest fixes"
+      - "Validate message flow and receiver service responses"
+      - "Check persisted data and error logs through database queries"
+      - "Prepare release documentation/test plans approximately every 1–2 weeks"
+    technical_checks:
+      kafka:
+        usage: >
+          Message broker is the main integration layer between legacy core and
+          microservice platform.
+        checks:
+          - "Verify that messages are produced and delivered"
+          - "Validate message correctness and source data completeness"
+          - "Check that receiver microservices process messages correctly"
+          - "Check service responses to migration/rollback messages"
+          - "Investigate message-related errors through persisted logs"
+      database:
+        likely_db: "PostgreSQL — adjust to your stack"
+        tools:
+          - "DBeaver"
+          - "pgAdmin"
+        checks:
+          - "Review message logs persisted into database tables"
+          - "Run select queries to identify migration errors"
+          - "Join logs from several tables by message ID"
+          - "Validate whether services persisted or removed data correctly"
+      cft:
+        public_name: "Legacy monolithic core"
+        private_name: "LegacyCore"
+        tasks:
+          - "Start migrations"
+          - "Create test agreements for migration"
+          - "Prepare source-side test data"
+      api_integration:
+        note: >
+          Communication is mainly event/message-based. Some services may expose
+          REST or SOAP endpoints — document only what you actually tested.
+      browser_devtools:
+        tool: "Browser DevTools"
+        note: "Use for UI checks if your project has admin or ops interfaces."
+    process:
+      methodology: "Scrum"
+      sprint_length: "2 weeks"
+      task_sources:
+        - "Team lead"
+        - "Requests from other teams for test data"
+      requirements_storage: "Confluence"
+      test_case_storage: "TestRail"
+      bug_tracking: "Jira"
+      environments:
+        - "Dev"
+        - "Staging"
+        - "Preprod"
+        - "Prod"
+      release_process_ru: >
+        Аналитик запрашивает релиз. Под релиз я готовлю тест-планы, оформляю
+        документацию и участвую в приёмке перед выкладкой.
+      release_process_en: >
+        An analyst requests a release. I prepare test plans, release documentation
+        and participate in acceptance before deployment.
+      smoke_regression:
+        smoke: >
+          Smoke checks are part of daily migration workflow — each migration
+          requires basic verification of system behavior.
+        regression: >
+          Full regression is rare due to project specifics. If needed, it could
+          take up to a week depending on scope.
+    team:
+      size: 10
+      known_roles:
+        - "Team lead"
+        - "QA"
+        - "Analysts"
+        - "Developers"
+        - "Adjacent microservice teams"
+        - "Automation QA (limited automation due to project specifics)"
+    numbers:
+      release_frequency: "Every 1–2 weeks"
+      test_cases_written_or_supported: "150+"
+      regression_size: "Not stable / not safe to claim"
+      regression_duration_estimate: "Up to one week if full regression is required"
+      bugs_per_sprint: "Not safe to claim"
+    automation:
+      current_state: >
+        Practical automated test execution is difficult on this project. I explored
+        automation approaches but project specifics made reliable automation hard.
+      safe_answer: >
+        Do not overclaim automation ownership. Describe as complex manual/integration/
+        data migration QA with automation thinking and testability improvements.
+    hands_on_tools:
+      high_confidence:
+        - "Message broker"
+        - "DBeaver"
+        - "Browser DevTools"
+        - "Legacy core system UI"
+        - "Jira"
+        - "TestRail"
+      exposure_or_context:
+        - "REST API testing"
+        - "SOAP-like enterprise integrations"
+        - "Automation design attempts"
+    strengths_from_project:
+      - "Database and log investigation"
+      - "Message-based integration testing"
+      - "FinTech data migration testing"
+      - "Cross-system defect localization"
+      - "Preparation of complex test data"
+      - "Release documentation and test planning"
+      - "Coordination with adjacent teams"

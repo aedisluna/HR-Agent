@@ -1,0 +1,683 @@
+#hr-agent-panel {
+  --ha-bg: #0f172a;
+  --ha-surface: #111827;
+  --ha-surface-2: #0b1220;
+  --ha-border: #334155;
+  --ha-text: #f8fafc;
+  --ha-muted: #94a3b8;
+  --ha-accent: #3b82f6;
+  --ha-accent-hover: #2563eb;
+  --ha-success: #22c55e;
+  --ha-danger: #ef4444;
+  --ha-warning: #f59e0b;
+
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  width: 380px;
+  height: min(680px, calc(100vh - 96px));
+  min-width: 300px;
+  min-height: 420px;
+  max-height: calc(100vh - 24px);
+  resize: none;
+  display: flex;
+  flex-direction: column;
+  z-index: 2147483646;
+  background: var(--ha-bg);
+  color: var(--ha-text);
+  border: 1px solid var(--ha-border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  font: 13px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+  overflow: hidden;
+}
+
+#hr-agent-panel.hidden {
+  display: none;
+}
+
+#hr-agent-panel .hr-agent-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#hr-agent-panel .hr-agent-scroll {
+  overflow-y: auto;
+  flex: 1 1 55%;
+  min-height: 140px;
+}
+
+#hr-agent-panel .hr-agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ha-border);
+  background: var(--ha-surface);
+  flex-shrink: 0;
+}
+
+#hr-agent-panel .hr-agent-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+#hr-agent-panel .hr-agent-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ha-muted);
+  flex-shrink: 0;
+}
+
+#hr-agent-panel .hr-agent-status-dot.online {
+  background: var(--ha-success);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+#hr-agent-panel .hr-agent-status-dot.offline {
+  background: var(--ha-danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+#hr-agent-panel .hr-agent-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#hr-agent-panel #hr-agent-close {
+  background: transparent;
+  border: none;
+  color: var(--ha-muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+#hr-agent-panel #hr-agent-close:hover {
+  color: var(--ha-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#hr-agent-panel .hr-agent-backend-line {
+  padding: 6px 14px 0;
+  font-size: 11px;
+  color: var(--ha-muted);
+}
+
+#hr-agent-panel .hr-agent-job-card {
+  margin: 10px 14px 0;
+  padding: 10px 12px;
+  background: var(--ha-surface-2);
+  border: 1px solid var(--ha-border);
+  border-radius: 10px;
+}
+
+#hr-agent-panel .hr-agent-job-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#hr-agent-panel .hr-agent-company {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+#hr-agent-panel .hr-agent-role {
+  font-size: 12px;
+  color: var(--ha-text);
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+#hr-agent-panel .hr-agent-platform {
+  font-size: 10px;
+  color: var(--ha-muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#hr-agent-panel .hr-agent-fit-badge {
+  flex-shrink: 0;
+  min-width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: #334155;
+  color: var(--ha-text);
+}
+
+#hr-agent-panel .hr-agent-fit-badge.fit-high {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+}
+
+#hr-agent-panel .hr-agent-fit-badge.fit-mid {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+}
+
+#hr-agent-panel .hr-agent-fit-badge.fit-low {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
+
+#hr-agent-panel .hr-agent-salary {
+  font-size: 11px;
+  color: #86efac;
+  margin-bottom: 8px;
+}
+
+#hr-agent-panel .hr-agent-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+#hr-agent-panel .hr-agent-keyword {
+  font-size: 10px;
+  line-height: 1.2;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #bfdbfe;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+#hr-agent-panel .hr-agent-track-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+#hr-agent-panel .hr-agent-status-select {
+  flex: 1;
+  background: var(--ha-surface);
+  color: var(--ha-text);
+  border: 1px solid var(--ha-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 12px;
+}
+
+#hr-agent-panel .btn-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--ha-border);
+  background: var(--ha-surface);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#hr-agent-panel .hr-agent-notes {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--ha-surface);
+  color: var(--ha-text);
+  border: 1px solid var(--ha-border);
+  border-radius: 8px;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+  min-height: 44px;
+  margin-bottom: 8px;
+}
+
+#hr-agent-panel .hr-agent-more-wrap {
+  position: relative;
+  margin-top: 8px;
+}
+
+#hr-agent-panel .hr-agent-more-btn {
+  width: 100%;
+}
+
+#hr-agent-panel .hr-agent-more-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: var(--ha-surface);
+  border: 1px solid var(--ha-border);
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+#hr-agent-panel .hr-agent-more-menu.hidden {
+  display: none !important;
+}
+
+#hr-agent-panel .hr-agent-more-menu button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--ha-text);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#hr-agent-panel .hr-agent-more-menu button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#hr-agent-panel .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+#hr-agent-panel .hr-agent-backend-line.hidden {
+  display: none;
+}
+
+#hr-agent-panel .hr-agent-meta {
+  color: var(--ha-text);
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+#hr-agent-panel .hr-agent-lang-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#hr-agent-panel .hr-agent-lang-row label {
+  color: var(--ha-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+#hr-agent-panel .hr-agent-lang-row select {
+  flex: 1;
+  background: var(--ha-surface);
+  color: var(--ha-text);
+  border: 1px solid var(--ha-border);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+#hr-agent-panel .hr-agent-section {
+  padding: 12px 14px 0;
+}
+
+#hr-agent-panel .hr-agent-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ha-muted);
+  margin-bottom: 8px;
+}
+
+#hr-agent-panel .hr-agent-actions-primary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#hr-agent-panel .hr-agent-actions-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+#hr-agent-panel button {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+#hr-agent-panel .btn-primary {
+  background: var(--ha-accent);
+  color: white;
+}
+
+#hr-agent-panel .btn-primary:hover {
+  background: var(--ha-accent-hover);
+}
+
+#hr-agent-panel .btn-secondary {
+  background: var(--ha-surface-2);
+  color: var(--ha-text);
+  border: 1px solid var(--ha-border);
+}
+
+#hr-agent-panel .btn-secondary:hover {
+  background: #1e293b;
+}
+
+#hr-agent-panel .btn-success {
+  background: #15803d;
+  color: white;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+#hr-agent-panel .btn-danger {
+  background: #b91c1c;
+  color: white;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+#hr-agent-panel .btn-ghost {
+  background: transparent;
+  color: var(--ha-muted);
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+#hr-agent-panel .btn-ghost:hover {
+  color: var(--ha-text);
+  border-color: var(--ha-border);
+}
+
+#hr-agent-panel #hr-agent-start-backend.hr-agent-hidden,
+#hr-agent-panel #hr-agent-stop-backend.hr-agent-hidden {
+  display: none !important;
+}
+
+#hr-agent-panel .hr-agent-collapsible {
+  margin: 10px 14px 0;
+  border: 1px solid var(--ha-border);
+  border-radius: 10px;
+  background: var(--ha-surface-2);
+  overflow: hidden;
+}
+
+#hr-agent-panel .hr-agent-collapsible-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--ha-text);
+  border: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+#hr-agent-panel .hr-agent-collapsible-toggle:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+#hr-agent-panel .hr-agent-collapsible-toggle .chevron {
+  color: var(--ha-muted);
+  transition: transform 0.15s ease;
+}
+
+#hr-agent-panel .hr-agent-collapsible.open .hr-agent-collapsible-toggle .chevron {
+  transform: rotate(90deg);
+}
+
+#hr-agent-panel .hr-agent-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--ha-accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+#hr-agent-panel .hr-agent-badge.hidden {
+  display: none;
+}
+
+#hr-agent-panel .hr-agent-collapsible-body {
+  display: none;
+  padding: 0 10px 10px;
+  border-top: 1px solid var(--ha-border);
+}
+
+#hr-agent-panel .hr-agent-collapsible.open .hr-agent-collapsible-body {
+  display: block;
+}
+
+#hr-agent-panel .hr-agent-questions {
+  padding-top: 8px;
+}
+
+#hr-agent-panel .hr-agent-question-block {
+  border: 1px solid var(--ha-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: var(--ha-surface);
+}
+
+#hr-agent-panel .hr-agent-question-text {
+  font-size: 12px;
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+
+#hr-agent-panel .hr-agent-question-hint {
+  font-size: 11px;
+  color: var(--ha-muted);
+  margin-bottom: 6px;
+}
+
+#hr-agent-panel .hr-agent-question-row {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+#hr-agent-panel .hr-agent-question-block textarea {
+  flex: 1;
+  min-height: 52px;
+  box-sizing: border-box;
+  background: var(--ha-surface-2);
+  color: var(--ha-text);
+  border: 1px solid var(--ha-border);
+  border-radius: 8px;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+#hr-agent-panel .hr-agent-question-block .btn-save {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  background: var(--ha-accent);
+  color: white;
+  font-size: 11px;
+}
+
+#hr-agent-panel .hr-agent-question-empty {
+  color: var(--ha-muted);
+  font-size: 12px;
+  padding: 4px 2px 2px;
+}
+
+#hr-agent-panel .hr-agent-logs-panel {
+  padding: 0 10px 10px;
+}
+
+#hr-agent-panel .hr-agent-logs-panel.hidden {
+  display: none;
+}
+
+#hr-agent-panel .hr-agent-logs-toolbar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#hr-agent-panel .hr-agent-logs-output {
+  margin: 0;
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--ha-bg);
+  border: 1px solid var(--ha-border);
+  border-radius: 8px;
+  max-height: 180px;
+  overflow: auto;
+  color: var(--ha-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+#hr-agent-panel .hr-agent-output-wrap {
+  flex: 1 1 40%;
+  min-height: 160px;
+  margin: 0 14px 10px;
+  border: 1px solid var(--ha-border);
+  border-radius: 10px;
+  background: var(--ha-surface-2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#hr-agent-panel .hr-agent-output-wrap.hidden {
+  display: none;
+}
+
+#hr-agent-panel .hr-agent-output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ha-border);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ha-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#hr-agent-panel .hr-agent-output {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 120px;
+  margin: 0;
+  padding: 10px 12px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #e2e8f0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  resize: none;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+#hr-agent-panel .hr-agent-output:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--ha-accent);
+}
+
+#hr-agent-panel .hr-agent-collapsible.hidden {
+  display: none;
+}
+
+#hr-agent-panel .hr-agent-footer {
+  margin-top: auto;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--ha-border);
+  background: var(--ha-surface);
+  flex-shrink: 0;
+}
+
+#hr-agent-panel .hr-agent-status {
+  font-size: 12px;
+  color: var(--ha-muted);
+  min-height: 18px;
+}
+
+#hr-agent-panel .hr-agent-status.busy {
+  color: #93c5fd;
+}
+
+#hr-agent-panel .hr-agent-status.error {
+  color: #fca5a5;
+}
+
+#hr-agent-panel .hr-agent-status.success {
+  color: #86efac;
+}
+
+#hr-agent-panel .hr-agent-resize-grip {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  width: 18px;
+  height: 18px;
+  pointer-events: auto;
+  cursor: nesw-resize;
+  opacity: 0.55;
+  z-index: 5;
+  background:
+    linear-gradient(45deg, transparent 0 42%, var(--ha-muted) 42% 48%, transparent 48% 100%),
+    linear-gradient(45deg, transparent 0 62%, var(--ha-muted) 62% 68%, transparent 68% 100%);
+}

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HR Agent — Applications</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f172a;
+      --panel: #111827;
+      --border: #374151;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --accent: #2563eb;
+      --green: #4ade80;
+      --yellow: #fbbf24;
+      --red: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0; font-size: 1.5rem; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    button, select, input {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font: inherit;
+    }
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    button.secondary {
+      background: var(--panel);
+      border-color: var(--border);
+    }
+    button:hover { filter: brightness(1.08); }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      min-width: 90px;
+    }
+    .stat .label { color: var(--muted); font-size: 12px; }
+    .stat .value { font-size: 20px; font-weight: 700; margin-top: 2px; }
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #0b1220;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      z-index: 1;
+    }
+    tr:hover td { background: rgba(37, 99, 235, 0.08); }
+    a { color: #93c5fd; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status-applied { background: rgba(74, 222, 128, 0.15); color: var(--green); }
+    .status-draft { background: rgba(251, 191, 36, 0.15); color: var(--yellow); }
+    .status-rejected { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+    .status-default { background: rgba(147, 197, 253, 0.12); color: #93c5fd; }
+    .company { font-weight: 600; }
+    .role, .source { color: var(--muted); font-size: 13px; }
+    .fit { font-variant-numeric: tabular-nums; }
+    .empty, .error, .loading {
+      padding: 32px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .status-select {
+      min-width: 120px;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    .search { min-width: 220px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Applications</h1>
+        <div class="role">HR Agent — отклики и статусы</div>
+      </div>
+      <div class="toolbar">
+        <input id="search" class="search" type="search" placeholder="Search company, role, url…">
+        <select id="status-filter">
+          <option value="">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="applied">Applied</option>
+          <option value="waiting">Waiting</option>
+          <option value="recruiter_screen">Screening</option>
+          <option value="test_task">Test task</option>
+          <option value="interview">Interview</option>
+          <option value="rejected">Rejected</option>
+          <option value="offer">Offer</option>
+        </select>
+        <button type="button" id="refresh">Refresh</button>
+        <button type="button" class="secondary" id="export">Export CSV</button>
+      </div>
+    </header>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Company</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Fit</th>
+            <th>Source</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="7" class="loading">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const STATUSES = [
+      "draft", "applied", "waiting", "recruiter_screen",
+      "test_task", "interview", "rejected", "offer",
+    ];
+    const STATUS_LABELS = {
+      draft: "Draft",
+      applied: "Applied",
+      waiting: "Waiting",
+      recruiter_screen: "Screening",
+      test_task: "Test task",
+      interview: "Interview",
+      rejected: "Rejected",
+      offer: "Offer",
+    };
+
+    let allRows = [];
+
+    function fmtDate(value) {
+      if (!value) return "—";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
+      return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+    }
+
+    function statusClass(status) {
+      if (status === "applied") return "status-applied";
+      if (status === "draft") return "status-draft";
+      if (status === "rejected") return "status-rejected";
+      return "status-default";
+    }
+
+    function renderStats(rows) {
+      const counts = { total: rows.length, applied: 0, draft: 0, active: 0 };
+      rows.forEach((row) => {
+        if (row.status === "applied") counts.applied += 1;
+        if (row.status === "draft") counts.draft += 1;
+        if (["waiting", "recruiter_screen", "test_task", "interview"].includes(row.status)) {
+          counts.active += 1;
+        }
+      });
+      document.getElementById("stats").innerHTML = `
+        <div class="stat"><div class="label">Total</div><div class="value">${counts.total}</div></div>
+        <div class="stat"><div class="label">Applied</div><div class="value">${counts.applied}</div></div>
+        <div class="stat"><div class="label">Draft</div><div class="value">${counts.draft}</div></div>
+        <div class="stat"><div class="label">In progress</div><div class="value">${counts.active}</div></div>
+      `;
+    }
+
+    function filteredRows() {
+      const q = document.getElementById("search").value.trim().toLowerCase();
+      const status = document.getElementById("status-filter").value;
+      return allRows.filter((row) => {
+        if (status && row.status !== status) return false;
+        if (!q) return true;
+        const hay = `${row.company} ${row.role} ${row.source} ${row.url || ""}`.toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    function renderTable() {
+      const rows = filteredRows();
+      const tbody = document.getElementById("rows");
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="empty">No applications found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map((row) => {
+        const date = fmtDate(row.applied_at);
+        const options = STATUSES.map(
+          (s) => `<option value="${s}" ${s === row.status ? "selected" : ""}>${STATUS_LABELS[s] || s}</option>`
+        ).join("");
+        return `
+          <tr data-id="${row.id}">
+            <td>${date}</td>
+            <td><div class="company">${escapeHtml(row.company)}</div></td>
+            <td><div class="role">${escapeHtml(row.role)}</div></td>
+            <td>
+              <span class="status ${statusClass(row.status)}">${STATUS_LABELS[row.status] || row.status}</span>
+              <div style="margin-top:6px">
+                <select class="status-select" data-id="${row.id}">${options}</select>
+              </div>
+            </td>
+            <td class="fit">${row.fit_score ?? "—"}</td>
+            <td><div class="source">${escapeHtml(row.source || "—")}</div></td>
+            <td>${row.url ? `<a href="${escapeAttr(row.url)}" target="_blank" rel="noopener">Open</a>` : "—"}</td>
+          </tr>
+        `;
+      }).join("");
+
+      tbody.querySelectorAll(".status-select").forEach((select) => {
+        select.addEventListener("change", async (event) => {
+          const id = event.target.getAttribute("data-id");
+          const status = event.target.value;
+          try {
+            const res = await fetch(`/applications/${id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status }),
+            });
+            if (!res.ok) throw new Error("Update failed");
+            const updated = await res.json();
+            const idx = allRows.findIndex((item) => String(item.id) === String(id));
+            if (idx >= 0) allRows[idx] = updated;
+            renderStats(allRows);
+            renderTable();
+          } catch (error) {
+            alert(error.message);
+            load();
+          }
+        });
+      });
+    }
+
+    function escapeHtml(text) {
+      return String(text || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function escapeAttr(text) {
+      return escapeHtml(text).replaceAll("'", "&#39;");
+    }
+
+    async function load() {
+      const tbody = document.getElementById("rows");
+      tbody.innerHTML = `<tr><td colspan="7" class="loading">Loading…</td></tr>`;
+      try {
+        const res = await fetch("/applications");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        allRows = await res.json();
+        renderStats(allRows);
+        renderTable();
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="7" class="error">Failed to load: ${escapeHtml(error.message)}</td></tr>`;
+      }
+    }
+
+    function exportCsv() {
+      const rows = filteredRows();
+      const header = ["id", "date", "company", "role", "status", "fit_score", "source", "url"];
+      const lines = [header.join(",")];
+      rows.forEach((row) => {
+        lines.push([
+          row.id,
+          row.applied_at || "",
+          csv(row.company),
+          csv(row.role),
+          row.status,
+          row.fit_score ?? "",
+          csv(row.source),
+          csv(row.url),
+        ].join(","));
+      });
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "hr-agent-applications.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function csv(value) {
+      const text = String(value || "").replaceAll('"', '""');
+      return `"${text}"`;
+    }
+
+    document.getElementById("refresh").addEventListener("click", load);
+    document.getElementById("export").addEventListener("click", exportCsv);
+    document.getElementById("search").addEventListener("input", renderTable);
+    document.getElementById("status-filter").addEventListener("change", renderTable);
+    load();
+  </script>
+</body>
+</html>

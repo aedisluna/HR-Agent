@@ -1,0 +1,83 @@
+{
+  "manifest_version": 3,
+  "name": "HR Agent Assistant",
+  "version": "0.5.3",
+  "description": "Local job application assistant for LinkedIn, HH.ru and external ATS pages.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "http://127.0.0.1:8001/*",
+    "http://localhost:8001/*",
+    "http://127.0.0.1:17890/*",
+    "https://www.linkedin.com/*",
+    "https://linkedin.com/*",
+    "https://hh.ru/*",
+    "https://*.hh.ru/*",
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "HR Agent Assistant"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*", "https://linkedin.com/*"],
+      "js": [
+        "lib/api.js",
+        "lib/extractors.js",
+        "lib/filler.js",
+        "lib/panel.js",
+        "lib/backend.js",
+        "lib/questions.js",
+        "lib/logger.js",
+        "lib/jobcard.js",
+        "lib/actions.js",
+        "content/linkedin.js"
+      ],
+      "css": ["styles/panel.css"]
+    },
+    {
+      "matches": ["https://hh.ru/*", "https://*.hh.ru/*"],
+      "js": [
+        "lib/api.js",
+        "lib/extractors.js",
+        "lib/filler.js",
+        "lib/panel.js",
+        "lib/backend.js",
+        "lib/questions.js",
+        "lib/logger.js",
+        "lib/jobcard.js",
+        "lib/actions.js",
+        "content/hh.js"
+      ],
+      "css": ["styles/panel.css"]
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "exclude_matches": [
+        "https://www.linkedin.com/*",
+        "https://linkedin.com/*",
+        "https://hh.ru/*",
+        "https://*.hh.ru/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": [
+        "lib/api.js",
+        "lib/extractors.js",
+        "lib/filler.js",
+        "lib/panel.js",
+        "lib/backend.js",
+        "lib/questions.js",
+        "lib/logger.js",
+        "lib/jobcard.js",
+        "lib/actions.js",
+        "content/ats.js"
+      ],
+      "css": ["styles/panel.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

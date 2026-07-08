@@ -1,0 +1,221 @@
+# Example standard answers for HR forms and recruiter questions
+#
+# Fields:
+#   answer              — text to use in forms
+#   confidence          — high | medium | low
+#   requires_confirmation — if true, agent should ask before auto-filling
+#   question_patterns   — optional; used for fuzzy matching in forms
+
+relocation:
+  are_you_open_to_relocation:
+    answer: "Yes, I am open to relocation for the right opportunity."
+    confidence: "high"
+    requires_confirmation: false
+  preferred_locations:
+    answer: "I am primarily interested in opportunities in the Netherlands, Germany and remote EU roles."
+    confidence: "high"
+    requires_confirmation: false
+
+work_authorization:
+  general:
+    answer: "My work authorization depends on the country and employment setup. I am open to discussing visa sponsorship or relocation options."
+    confidence: "medium"
+    requires_confirmation: true
+  netherlands:
+    answer: "I may require visa sponsorship for the Netherlands, depending on the employment setup."
+    confidence: "medium"
+    requires_confirmation: true
+  eu_general:
+    answer: "I am an EU resident and can discuss local employment requirements case by case."
+    confidence: "medium"
+    requires_confirmation: true
+
+salary:
+  generic:
+    answer: "Negotiable depending on location, responsibilities, benefits, relocation support and total compensation."
+    confidence: "high"
+    requires_confirmation: false
+    question_patterns:
+      - "salary expectation"
+      - "compensation expectation"
+      - "expected salary"
+  netherlands_yearly:
+    answer: "Approximately €70,000–€85,000 gross per year depending on the full package, role scope and location."
+    confidence: "medium"
+    requires_confirmation: true
+    question_patterns:
+      - "salary range"
+      - "yearly gross"
+  hh_ru_salary_match:
+    answer: "Да, такая вилка мне подходит."
+    confidence: "high"
+    requires_confirmation: false
+    question_patterns:
+      - "совпадает ли это с вашими зарплатными ожиданиями"
+      - "зарплатные ожидания"
+      - "вилка на эту вакансию"
+
+notice_period:
+  answer: "Two weeks, negotiable depending on the situation."
+  confidence: "medium"
+  requires_confirmation: true
+  question_patterns:
+    - "notice period"
+    - "when can you start"
+    - "earliest start date"
+
+english:
+  level:
+    answer: "C1 / Advanced — comfortable in documentation, meetings and written communication."
+    confidence: "high"
+    requires_confirmation: false
+  can_work_in_english:
+    answer: "Yes, I can work in English, including documentation, team communication and stakeholder interaction."
+    confidence: "high"
+    requires_confirmation: false
+
+qa_experience:
+  years:
+    answer: "I have 5+ years of QA experience."
+    confidence: "high"
+    requires_confirmation: false
+  manual_testing:
+    answer: "Yes, I have strong manual QA experience across functional, regression, smoke, exploratory, cross-browser, web, mobile, API, database and integration testing."
+    confidence: "high"
+    requires_confirmation: false
+  api_testing:
+    answer: "Yes, I have experience testing REST APIs with Postman and Swagger, investigating client-server behavior and validating integrations."
+    confidence: "high"
+    requires_confirmation: false
+  database_testing:
+    answer: "Yes, I have experience with SQL, PostgreSQL and DBeaver for data validation and investigation."
+    confidence: "high"
+    requires_confirmation: false
+  mobile_testing:
+    answer: "Yes, I have tested iOS and Android applications, including client-server behavior and basic mobile debugging."
+    confidence: "high"
+    requires_confirmation: false
+  fintech:
+    answer: "Yes, I have experience with FinTech and enterprise systems where data correctness, integrations and release stability are critical."
+    confidence: "high"
+    requires_confirmation: false
+
+automation:
+  automation_experience:
+    answer: "I have practical automation training and I am actively growing toward QA Automation / SDET, with Java, JUnit, API testing fundamentals, Mockito and WireMock basics."
+    confidence: "medium"
+    requires_confirmation: true
+  java:
+    answer: "Yes, I have Java knowledge and test automation coursework experience."
+    confidence: "medium"
+    requires_confirmation: true
+  ci_cd:
+    answer: "I have basic CI/CD understanding and experience working around CI/CD-driven testing processes."
+    confidence: "medium"
+    requires_confirmation: true
+  docker:
+    answer: "I have basic practical Docker experience and can use it in development/testing workflows."
+    confidence: "medium"
+    requires_confirmation: true
+
+motivation:
+  why_leaving:
+    answer: >
+      I am looking for a role where I can continue growing toward QA Automation
+      / SDET and apply stronger technical testing practices. My current experience
+      gave me a solid QA foundation, and now I want more technically challenging
+      work with deeper automation growth.
+    confidence: "high"
+    requires_confirmation: false
+  why_this_role:
+    answer: >
+      This role is interesting to me because it combines product quality,
+      technical investigation, API/backend testing and automation growth. My
+      background in manual QA, FinTech systems, API testing and database validation
+      allows me to contribute to release quality while continuing to grow toward
+      QA Automation / SDET responsibilities.
+    confidence: "high"
+    requires_confirmation: false
+  why_hire_you:
+    answer: >
+      I bring hands-on QA experience across web, mobile, API, backend and database
+      testing, with a practical understanding of release risks, defect localization
+      and cross-functional communication. I am also growing in Java-based automation,
+      which makes me a good fit for teams that need reliable QA ownership and a path
+      toward stronger automation coverage.
+    confidence: "high"
+    requires_confirmation: false
+  biggest_strength:
+    answer: >
+      My strongest point is technical defect investigation: I can reproduce issues,
+      collect useful evidence, check API/database/client-server behavior and
+      communicate the problem clearly so developers can act on it faster.
+    confidence: "high"
+    requires_confirmation: false
+
+current_project:
+  tell_me_about_current_project:
+    answer: >
+      Since early 2024, I have been working at Example Corp as a Middle QA Engineer
+      on a FinTech data migration project. My work includes requirement analysis,
+      test design, functional and regression testing, API/backend checks, database
+      validation, integration testing, defect investigation and release readiness support.
+    confidence: "medium"
+    requires_confirmation: true
+
+  project_description:
+    answer: >
+      My current project migrates business data from a legacy monolithic core system
+      to a new internal microservice platform. The system acts as a bridge between
+      the legacy source, a message broker and receiving microservices.
+    confidence: "high"
+    requires_confirmation: false
+
+  current_responsibilities:
+    answer: >
+      I run migrations on different environments, investigate migration errors,
+      prepare test data, validate message flow and receiver responses, check persisted
+      data through database queries, retest fixes and prepare release test plans.
+    confidence: "high"
+    requires_confirmation: false
+
+  message_broker_experience:
+    answer: >
+      Yes. I use a message broker in migration/integration testing: I verify that
+      messages are delivered, check message correctness, investigate errors through
+      persisted logs and validate that receiving services process messages correctly.
+    confidence: "high"
+    requires_confirmation: false
+
+  database_experience_current:
+    answer: >
+      Yes. I use DBeaver and SQL to inspect logs, identify migration errors, join
+      records from several tables by message ID and validate whether data was persisted
+      or rolled back correctly.
+    confidence: "high"
+    requires_confirmation: false
+
+  automation_on_current_project:
+    answer: >
+      Due to project specifics, practical automated test execution is limited. I would
+      position this project mainly as technically complex integration/data migration QA
+      rather than production automation ownership.
+    confidence: "high"
+    requires_confirmation: false
+
+hh_ru:
+  work_in_russia:
+    answer: "Нет, сейчас рассматриваю возможности в EU / remote."
+    confidence: "high"
+    requires_confirmation: false
+    question_patterns:
+      - "планируете работать на территории россии"
+      - "территории россии"
+  moscow_timezone:
+    answer: "Да, могу работать в часовом поясе CET (Berlin) с пересечением с EU/US команд."
+    confidence: "high"
+    requires_confirmation: false
+    question_patterns:
+      - "часовом поясе"
+      - "gmt"
+      - "time zone"

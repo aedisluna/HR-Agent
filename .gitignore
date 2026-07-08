@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Runtime / local state
+data/applications.db
+logs/
+*.log
+
+# Personal profile data (use data/*.example.* as templates)
+data/candidate_profile.yaml
+data/resume.md
+data/standard_answers.yaml
+data/interview_stories.yaml
+data/missing_data.yaml
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

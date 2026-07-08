@@ -1,0 +1,84 @@
+# Facts the agent must NOT invent — confirm with the candidate first
+#
+# Sections:
+#   critical            — must be filled before auto-filling forms
+#   verify_before_using — risky claims; agent should ask before using
+#   current_project     — NDA-sensitive project details
+
+critical:
+  exact_contact_email:
+    question: "Which email should be used in job applications?"
+    current_assumption: "Use email from resume.md"
+    importance: "high"
+  exact_phone:
+    question: "Which phone number should be used in international forms?"
+    current_assumption: "Use phone from resume.md"
+    importance: "high"
+  notice_period:
+    question: "Exact notice period: 2 weeks, 1 month, negotiable?"
+    current_assumption: "2 weeks / negotiable"
+    importance: "high"
+  current_location_for_applications:
+    question: "What location to write in forms: current city, target country, or 'open to relocate'?"
+    current_assumption: "Berlin, Germany"
+    importance: "high"
+  work_authorization:
+    question: "Work authorization per target country — sponsorship needed or not?"
+    current_assumption: "Depends on country and employment setup"
+    importance: "high"
+
+verify_before_using:
+  automation_regression_percentage:
+    question: "Can you claim a specific % of regression covered by automation (e.g. nightly runs)?"
+    risk: "May conflict with positioning as mostly manual/API QA growing into automation."
+    importance: "high"
+  total_test_cases_written:
+    question: "Can you confidently state how many test cases you wrote personally vs supported?"
+    risk: "Strong numeric claims must be defensible in interview."
+    importance: "high"
+  ci_cd_tools_depth:
+    question: "Jenkins/Docker/K8s — hands-on ownership or exposure as QA user?"
+    risk: "May sound like DevOps ownership if phrased too strongly."
+    importance: "high"
+  architecture_wording:
+    question: "Was ShopStream truly microservices or modular/monolith? Use exact safe wording."
+    risk: "Interviewers may ask for technical details."
+    importance: "medium"
+  payment_integrations:
+    question: "Which payment providers were tested and were sandbox/mock environments used?"
+    risk: "Payment questions can become very detailed."
+    importance: "medium"
+
+current_project:
+  project_name:
+    question: "How can the current project be named on interviews without breaking NDA?"
+    current_assumption: "FinTech data migration / legacy monolith to microservices"
+    importance: "high"
+  product_description:
+    question: "What does the system do from a business perspective?"
+    current_assumption: "Internal data migration between legacy core and new platform"
+    importance: "high"
+  architecture:
+    question: "Architecture: monolith, microservices, event-driven, hybrid?"
+    current_assumption: "Bridge between legacy monolith and microservice receivers"
+    importance: "high"
+  message_broker_depth:
+    question: "What exactly do you do with the message broker: read topics, validate payloads, trace errors?"
+    current_assumption: "Validate delivery, payload correctness and receiver processing"
+    importance: "high"
+  database:
+    question: "Which DB and what typical SQL checks do you run?"
+    current_assumption: "PostgreSQL or MySQL — confirm; DBeaver for log/join queries"
+    importance: "high"
+  release_process:
+    question: "Release cadence, environments, smoke/regression after release?"
+    current_assumption: "Release every 1–2 weeks with test plans — confirm"
+    importance: "medium"
+  interesting_bug:
+    question: "One strong, NDA-safe example of a complex bug on the current project."
+    current_assumption: "Rollback handling bug — see interview_stories.example.yaml"
+    importance: "high"
+  nda_public_wording:
+    question: "Which internal names must NEVER appear in public CV/LinkedIn?"
+    current_assumption: "Client name, internal system names, production migration details"
+    importance: "high"

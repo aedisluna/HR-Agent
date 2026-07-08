@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+pyyaml
+requests
+python-multipart
+sqlalchemy
+streamlit
+playwright
