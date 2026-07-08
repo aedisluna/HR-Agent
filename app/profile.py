@@ -1,7 +1,15 @@
+import re
+
 import yaml
 from pathlib import Path
 
 from app.config import DATA_DIR, PROMPTS_DIR
+
+_PROMPT_NAME = re.compile(r"^[a-z0-9_]+$")
+
+
+class ProfileDataError(Exception):
+    """Raised when profile data files are missing or invalid."""
 
 
 def _resolve_data_path(filename: str) -> Path:
@@ -23,13 +31,39 @@ def _resolve_data_path(filename: str) -> Path:
 
 
 def load_yaml(path: Path) -> dict:
-    with path.open("r", encoding="utf-8") as file:
-        return yaml.safe_load(file) or {}
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            data = yaml.safe_load(file)
+    except FileNotFoundError as exc:
+        raise ProfileDataError(
+            f"Missing data file: {path.name}. "
+            "Copy the matching file from data/*.example.* or run: "
+            "python scripts/setup_profile_data.py"
+        ) from exc
+    except yaml.YAMLError as exc:
+        raise ProfileDataError(f"Invalid YAML in {path.name}: {exc}") from exc
+    return data or {}
 
 
 def load_text(path: Path) -> str:
-    with path.open("r", encoding="utf-8") as file:
-        return file.read().strip()
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            return file.read().strip()
+    except FileNotFoundError as exc:
+        raise ProfileDataError(f"Missing file: {path.name}") from exc
+
+
+def format_for_prompt(value: dict | list | str | None) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if value is None:
+        return ""
+    return yaml.dump(
+        value,
+        allow_unicode=True,
+        default_flow_style=False,
+        sort_keys=False,
+    ).strip()
 
 
 def load_candidate_profile() -> dict:
@@ -53,6 +87,8 @@ def load_resume() -> str:
 
 
 def load_prompt(name: str) -> str:
+    if not _PROMPT_NAME.match(name):
+        raise ProfileDataError(f"Invalid prompt name: {name}")
     return load_text(PROMPTS_DIR / f"{name}.md")
 
 

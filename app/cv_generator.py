@@ -4,6 +4,7 @@ from app.config import JOB_TEXT_MAX_CHARS, MODEL_CV
 from app.language import language_instruction, resolve_language
 from app.llm import ask_llm
 from app.profile import (
+    format_for_prompt,
     load_candidate_profile,
     load_prompt,
     load_resume,
@@ -80,7 +81,7 @@ def generate_tailored_cv(
 {language_instruction(language)}
 
 Candidate profile:
-{profile}
+{format_for_prompt(profile)}
 
 Base resume:
 {resume}

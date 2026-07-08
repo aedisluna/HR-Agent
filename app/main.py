@@ -1,22 +1,23 @@
-from typing import Optional
 import logging
 import time
+from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+import yaml
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 
 from app.analyzer import analyze_job, generate_cover_letter
 from app.answer_generator import generate_answers
 from app.cv_generator import generate_tailored_cv
-from app.config import APPLICATION_STATUSES, MODEL, MODEL_FAST, PROJECT_ROOT
+from app.config import APP_VERSION, APPLICATION_STATUSES, MODEL, MODEL_FAST, PROJECT_ROOT
 from app.llm import LLMError
 from app.logging_setup import BACKEND_LOG, LAUNCHER_LOG, clear_log_files, read_log_tail, setup_logging
 from app.platforms.ats import map_form_fields
 from app.profile import (
+    ProfileDataError,
     load_candidate_profile,
     load_interview_stories,
     load_missing_data,
@@ -39,7 +40,6 @@ from app.schemas import (
     ExtensionAnalyzeRequest,
     ExtensionFillFormRequest,
     ExtensionGenerateCvRequest,
-    ExtensionPagePayload,
     ExtensionSaveAnswerRequest,
     ExtensionTrackRequest,
     FullAnalysisRequest,
@@ -53,10 +53,36 @@ from app.storage import Application, LearnedAnswer, SessionLocal, get_db, init_d
 setup_logging()
 logger = logging.getLogger("hr_agent.api")
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    init_db()
+    db = SessionLocal()
+    try:
+        learned_count = db.query(LearnedAnswer).count()
+        if learned_count == 0:
+            seeded = seed_from_data_files(replace_existing=True)
+            logger.info("Seeded %s learned answers on first run", seeded)
+        else:
+            logger.info("Learned answers already present: %s rows", learned_count)
+    except ProfileDataError as exc:
+        logger.warning("Profile seed skipped: %s", exc)
+    finally:
+        db.close()
+    logger.info(
+        "HR Agent API started (version %s, model=%s, fast=%s)",
+        APP_VERSION,
+        MODEL,
+        MODEL_FAST,
+    )
+    yield
+
+
 app = FastAPI(
     title="Local Job Application Assistant",
     description="Local AI assistant for job analysis, answers, and application tracking.",
-    version="0.3.0",
+    version=APP_VERSION,
+    lifespan=lifespan,
 )
 
 
@@ -101,24 +127,34 @@ app.add_middleware(
 )
 
 
-@app.on_event("startup")
-def on_startup() -> None:
-    init_db()
-    db = SessionLocal()
-    try:
-        learned_count = db.query(LearnedAnswer).count()
-        if learned_count == 0:
-            seeded = seed_from_data_files(replace_existing=True)
-            logger.info("Seeded %s learned answers on first run", seeded)
-        else:
-            logger.info("Learned answers already present: %s rows", learned_count)
-    finally:
-        db.close()
-    logger.info("HR Agent API started (version 0.3.0, model=%s, fast=%s)", MODEL, MODEL_FAST)
-
-
 def _handle_llm_error(exc: LLMError) -> HTTPException:
     return HTTPException(status_code=503, detail=str(exc))
+
+
+@app.exception_handler(ProfileDataError)
+async def profile_data_error_handler(_request: Request, exc: ProfileDataError):
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": str(exc),
+            "hint": "Run: python scripts/setup_profile_data.py",
+        },
+    )
+
+
+@app.exception_handler(yaml.YAMLError)
+async def yaml_error_handler(_request: Request, exc: yaml.YAMLError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": f"Invalid YAML in profile data: {exc}"},
+    )
+
+
+def _log_path_label(path) -> str:
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return path.name
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -159,7 +195,7 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "version": "0.3.0"}
+    return {"status": "ok", "version": APP_VERSION}
 
 
 @app.get("/debug/logs")
@@ -174,12 +210,12 @@ def get_debug_logs(
         "source": source,
         "lines": lines,
         "backend": {
-            "path": str(BACKEND_LOG),
+            "path": _log_path_label(BACKEND_LOG),
             "exists": BACKEND_LOG.exists(),
             "entries": backend_lines,
         },
         "launcher": {
-            "path": str(LAUNCHER_LOG),
+            "path": _log_path_label(LAUNCHER_LOG),
             "exists": LAUNCHER_LOG.exists(),
             "entries": launcher_lines,
         },
@@ -605,16 +641,4 @@ def extension_generate_cv(request: ExtensionGenerateCvRequest):
         "platform": request.platform,
         "url": request.url,
         "response_language": request.response_language,
-    }
-
-
-@app.post("/extension/parse-page")
-def extension_parse_page(request: ExtensionPagePayload):
-    return {
-        "platform": request.platform,
-        "page_kind": request.page_kind,
-        "detected_fields": len(request.fields),
-        "job_preview": request.job_text[:500],
-        "ready_for_analysis": len(request.job_text) >= 20,
-        "ready_for_fill": len(request.fields) > 0,
     }

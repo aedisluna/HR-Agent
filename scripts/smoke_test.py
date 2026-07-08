@@ -6,7 +6,13 @@ import sys
 
 import requests
 
+from app.config import APP_VERSION
+
 BASE = "http://127.0.0.1:8001"
+SMOKE_JOB_TEXT = (
+    "QA Engineer with API testing, SQL, and integration testing experience "
+    "required for a fintech project."
+)
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
@@ -17,9 +23,22 @@ def check(name: str, ok: bool, detail: str = "") -> None:
         raise SystemExit(1)
 
 
+def ollama_available() -> bool:
+    try:
+        response = requests.get("http://localhost:11434/api/tags", timeout=2)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False
+
+
 def main() -> None:
     health = requests.get(f"{BASE}/health", timeout=5).json()
     check("health", health.get("status") == "ok", str(health))
+    check(
+        "api version",
+        health.get("version", "").split(".")[:2] == APP_VERSION.split(".")[:2],
+        health.get("version"),
+    )
 
     ui = requests.get(f"{BASE}/applications/ui", timeout=5)
     check("applications ui", ui.status_code == 200 and "<table>" in ui.text.lower())
@@ -32,7 +51,7 @@ def main() -> None:
             "company": "Smoke Co",
             "role": "QA Engineer",
             "status": "draft",
-            "job_text": "QA engineer smoke test vacancy description",
+            "job_text": SMOKE_JOB_TEXT,
         },
         timeout=5,
     )
@@ -62,7 +81,7 @@ def main() -> None:
         json={
             "platform": "hh",
             "url": "https://hh.ru/vacancy/smoke-test",
-            "job_text": "QA engineer with API testing experience",
+            "job_text": SMOKE_JOB_TEXT,
             "use_llm": False,
             "fields": [
                 {
@@ -84,18 +103,45 @@ def main() -> None:
         str(fill_data.get("auto_fill_count")),
     )
 
-    cv = requests.post(
-        f"{BASE}/extension/generate-cv",
+    analyze_save = requests.post(
+        f"{BASE}/analyze-and-save",
         json={
-            "platform": "hh",
-            "url": "https://hh.ru/vacancy/smoke-test",
+            "job_text": SMOKE_JOB_TEXT,
             "company": "Smoke Co",
             "role": "QA Engineer",
-            "job_text": "QA engineer with API testing and automation experience",
+            "save_application": False,
         },
-        timeout=120,
+        timeout=120 if ollama_available() else 5,
     )
-    check("generate cv", cv.status_code == 200 and len(cv.json().get("cv", "")) > 100)
+    if ollama_available():
+        check(
+            "analyze and save",
+            analyze_save.status_code == 200
+            and "analysis" in analyze_save.json(),
+            analyze_save.text[:120],
+        )
+    else:
+        check(
+            "analyze and save",
+            analyze_save.status_code in {503, 500},
+            "skipped LLM body check (Ollama offline)",
+        )
+
+    if ollama_available():
+        cv = requests.post(
+            f"{BASE}/extension/generate-cv",
+            json={
+                "platform": "hh",
+                "url": "https://hh.ru/vacancy/smoke-test",
+                "company": "Smoke Co",
+                "role": "QA Engineer",
+                "job_text": SMOKE_JOB_TEXT,
+            },
+            timeout=120,
+        )
+        check("generate cv", cv.status_code == 200 and len(cv.json().get("cv", "")) > 100)
+    else:
+        print("[SKIP] generate cv — Ollama offline")
 
     print("All smoke tests passed.")
 

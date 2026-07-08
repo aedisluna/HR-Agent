@@ -132,7 +132,9 @@ python scripts/smoke_test.py
 ## Privacy & security
 
 - Profile data stays in `data/` on your machine (gitignored)
-- Backend binds to `127.0.0.1` only
+- Backend binds to `127.0.0.1` only — any local process can call the API; do not expose port 8001
+- Launcher control endpoints require the `X-HR-Agent-Client: extension` header (browser extension only)
+- `/profile` and `/debug/logs` return local profile and log data — localhost use only
 - No external LLM API keys — Ollama runs locally
 - Do **not** commit real profile files; use `*.example.*` templates
 

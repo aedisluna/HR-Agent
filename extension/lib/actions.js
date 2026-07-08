@@ -34,7 +34,6 @@ window.HrAgentActions = {
 
   async initPanel(payload = {}) {
     HrAgentPanel.ensure();
-    this._currentUrl = payload.url || "";
     await HrAgentBackend.refreshStatus();
     try {
       await HrAgentJobCard.refresh(payload);

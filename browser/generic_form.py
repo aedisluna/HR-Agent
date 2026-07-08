@@ -1,10 +1,8 @@
 """
-Safe ATS autofill helper (MVP 3).
+Standalone Playwright helper — not wired into the FastAPI app or extension.
 
-Rules:
-- Does NOT automate LinkedIn.
-- Does NOT submit forms.
-- Does NOT bypass CAPTCHA or anti-bot protections.
+Run manually after installing Playwright:
+    python browser/generic_form.py
 """
 
 from playwright.sync_api import sync_playwright

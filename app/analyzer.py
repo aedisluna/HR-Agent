@@ -4,6 +4,7 @@ from app.config import JOB_TEXT_MAX_CHARS, MODEL_FAST
 from app.language import language_instruction, resolve_language
 from app.llm import ask_llm
 from app.profile import (
+    format_for_prompt,
     load_candidate_profile,
     load_interview_stories,
     load_missing_data,
@@ -13,11 +14,17 @@ from app.profile import (
 )
 
 def _extract_fit_score(analysis: str) -> int | None:
-    match = re.search(r"fit score[^\d]*(\d{1,3})", analysis, re.IGNORECASE)
-    if not match:
-        return None
-    score = int(match.group(1))
-    return min(max(score, 0), 100)
+    patterns = (
+        r"fit score[^\d]*(\d{1,3})",
+        r"##\s*fit score\s*\n+\s*(\d{1,3})",
+        r"(\d{1,3})\s*/\s*100",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, analysis, re.IGNORECASE)
+        if match:
+            score = int(match.group(1))
+            return min(max(score, 0), 100)
+    return None
 
 
 def _extract_should_apply(analysis: str) -> str | None:
@@ -26,7 +33,15 @@ def _extract_should_apply(analysis: str) -> str | None:
         analysis,
         re.IGNORECASE,
     )
-    return match.group(1).lower() if match else None
+    if match:
+        return match.group(1).lower()
+
+    fallback = re.search(
+        r"(?:should apply|стоит откликаться)[^\n]*\b(yes|maybe|no)\b",
+        analysis,
+        re.IGNORECASE,
+    )
+    return fallback.group(1).lower() if fallback else None
 
 
 def _job_requires_developer_or_lead(job_text: str) -> bool:
@@ -153,16 +168,16 @@ def analyze_job(
 {language_instruction(language)}
 
 Candidate profile:
-{profile}
+{format_for_prompt(profile)}
 
 Resume:
 {resume}
 
 Interview stories:
-{interview_stories}
+{format_for_prompt(interview_stories)}
 
 Facts that require confirmation before use:
-{missing_data}
+{format_for_prompt(missing_data)}
 
 Job description:
 {trimmed_job}
@@ -209,16 +224,16 @@ def generate_cover_letter(
 {language_instruction(language)}
 
 Candidate profile:
-{profile}
+{format_for_prompt(profile)}
 
 Resume:
 {resume}
 
 Interview stories:
-{interview_stories}
+{format_for_prompt(interview_stories)}
 
 Facts that require confirmation before use:
-{missing_data}
+{format_for_prompt(missing_data)}
 
 Company: {company or "Unknown"}
 Role: {role or "Unknown"}

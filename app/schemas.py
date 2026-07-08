@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -36,7 +35,7 @@ class ApplicationCreate(BaseModel):
     source: str = "manual"
     url: Optional[str] = None
     status: str = "draft"
-    fit_score: Optional[int] = None
+    fit_score: Optional[int] = Field(default=None, ge=0, le=100)
     notes: Optional[str] = None
     generated_pitch: Optional[str] = None
     generated_cover_letter: Optional[str] = None
@@ -50,7 +49,7 @@ class ApplicationUpdate(BaseModel):
     source: Optional[str] = None
     url: Optional[str] = None
     status: Optional[str] = None
-    fit_score: Optional[int] = None
+    fit_score: Optional[int] = Field(default=None, ge=0, le=100)
     notes: Optional[str] = None
     generated_pitch: Optional[str] = None
     generated_cover_letter: Optional[str] = None
@@ -100,6 +99,7 @@ class FullAnalysisRequest(BaseModel):
     source: str = "manual"
     url: Optional[str] = None
     save_application: bool = True
+    response_language: ResponseLanguage = "auto"
 
 
 class FormField(BaseModel):
@@ -109,17 +109,6 @@ class FormField(BaseModel):
     name: Optional[str] = None
     placeholder: Optional[str] = None
     required: bool = False
-
-
-class ExtensionPagePayload(BaseModel):
-    platform: str
-    url: str
-    title: Optional[str] = None
-    company: Optional[str] = None
-    role: Optional[str] = None
-    job_text: str = Field(..., min_length=10)
-    fields: list[FormField] = Field(default_factory=list)
-    page_kind: str = "job"  # job | application_form
 
 
 class ExtensionFillFormRequest(BaseModel):
@@ -173,5 +162,5 @@ class ExtensionTrackRequest(BaseModel):
     role: Optional[str] = None
     job_text: Optional[str] = None
     status: str = "draft"
-    fit_score: Optional[int] = None
+    fit_score: Optional[int] = Field(default=None, ge=0, le=100)
     notes: Optional[str] = None

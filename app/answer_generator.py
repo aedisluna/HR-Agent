@@ -2,6 +2,7 @@ from app.config import JOB_TEXT_MAX_CHARS, MODEL_FAST
 from app.language import language_instruction, resolve_language
 from app.llm import ask_llm
 from app.profile import (
+    format_for_prompt,
     load_candidate_profile,
     load_interview_stories,
     load_missing_data,
@@ -32,19 +33,19 @@ def generate_answers(
 {language_instruction(language)}
 
 Candidate profile:
-{profile}
+{format_for_prompt(profile)}
 
 Resume:
 {resume}
 
 Known standard answers:
-{standard_answers}
+{format_for_prompt(standard_answers)}
 
 Interview stories (use for behavioral questions):
-{interview_stories}
+{format_for_prompt(interview_stories)}
 
 Facts that require confirmation before use:
-{missing_data}
+{format_for_prompt(missing_data)}
 
 Job description:
 {trimmed_job}

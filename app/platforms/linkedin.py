@@ -1,13 +1,6 @@
-"""LinkedIn page helpers.
-
-DOM extraction happens in the browser extension. This module keeps
-server-side platform metadata and future HTML parsing hooks.
-"""
+"""LinkedIn platform metadata for the browser extension."""
 
 LINKEDIN_SAFE_MODE = True
-
-PLATFORM_NAME = "linkedin"
-
 SUBMIT_AUTOMATION_ALLOWED = False
 
 KNOWN_EXTERNAL_REDIRECTS = [

@@ -20,13 +20,24 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.config import APP_VERSION
 from app.logging_setup import append_launcher_log
 BACKEND_PORT = 8001
 BACKEND_URL = f"http://127.0.0.1:{BACKEND_PORT}"
 BACKEND_HEALTH_URL = f"{BACKEND_URL}/health"
-EXPECTED_API_VERSION = "0.3.0"
 LAUNCHER_PORT = 17890
 BACKEND_PROCESS: subprocess.Popen | None = None
+LAUNCHER_CLIENT_HEADER = "X-HR-Agent-Client"
+LAUNCHER_CLIENT_VALUE = "extension"
+_ALLOWED_ORIGIN_PREFIXES = ("chrome-extension://", "moz-extension://")
+
+
+def api_version_compatible(reported: str | None) -> bool:
+    if not reported:
+        return True
+    reported_parts = reported.split(".")
+    expected_parts = APP_VERSION.split(".")
+    return reported_parts[:2] == expected_parts[:2]
 
 
 def _read_health() -> dict | None:
@@ -44,7 +55,7 @@ def backend_running() -> bool:
     if not health:
         return False
     version = health.get("version")
-    return not version or version == EXPECTED_API_VERSION
+    return api_version_compatible(version)
 
 
 def start_backend() -> dict:
@@ -166,13 +177,30 @@ def stop_backend() -> dict:
 
 
 class LauncherHandler(BaseHTTPRequestHandler):
+    def _allowed_cors_origin(self) -> str | None:
+        origin = self.headers.get("Origin")
+        if not origin:
+            return None
+        if origin.startswith(_ALLOWED_ORIGIN_PREFIXES):
+            return origin
+        return None
+
+    def _launcher_client_ok(self) -> bool:
+        return self.headers.get(LAUNCHER_CLIENT_HEADER) == LAUNCHER_CLIENT_VALUE
+
     def _send(self, status: int, payload: dict) -> None:
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self._allowed_cors_origin()
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            f"Content-Type, {LAUNCHER_CLIENT_HEADER}",
+        )
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -198,6 +226,10 @@ class LauncherHandler(BaseHTTPRequestHandler):
         self._send(404, {"error": "not_found"})
 
     def do_POST(self) -> None:
+        if not self._launcher_client_ok():
+            self._send(403, {"error": "forbidden"})
+            return
+
         if self.path == "/start-backend":
             try:
                 append_launcher_log("Start backend requested by extension")

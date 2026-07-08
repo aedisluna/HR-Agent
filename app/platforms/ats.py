@@ -154,6 +154,16 @@ def map_form_fields(
         )
         llm_answers = _parse_llm_field_answers(llm_text, unresolved)
 
+    cover_letter_text: str | None = None
+    if use_llm and any(_is_cover_letter_field(q) for q in questions):
+        cover_letter_text = generate_tailored_cv(
+            job_text=job_text,
+            company=company,
+            role=role,
+            response_language=response_language,
+            platform=platform,
+        )
+
     results = []
     for field, question in zip(fields, questions):
         if _is_cover_letter_field(question):
@@ -171,18 +181,11 @@ def map_form_fields(
                 )
                 continue
 
-            cv_text = generate_tailored_cv(
-                job_text=job_text,
-                company=company,
-                role=role,
-                response_language=response_language,
-                platform=platform,
-            )
             results.append(
                 {
                     "field_id": field.get("id"),
                     "label": question,
-                    "answer": cv_text,
+                    "answer": cover_letter_text,
                     "confidence": "high",
                     "needs_confirmation": True,
                     "source": "tailored_cv",

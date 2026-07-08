@@ -1,4 +1,6 @@
+import json
 import logging
+
 import requests
 
 from app.config import (
@@ -54,19 +56,25 @@ def ask_llm(
     try:
         response = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
         response.raise_for_status()
+        data = response.json()
     except requests.ConnectionError as exc:
         logger.error("Ollama connection failed")
         raise LLMError(
             "Cannot connect to Ollama. Start it with: ollama serve"
         ) from exc
-    except requests.HTTPError as exc:
-        logger.error("Ollama HTTP error: %s", exc)
-        raise LLMError(f"Ollama request failed: {exc}") from exc
     except requests.Timeout as exc:
         logger.error("Ollama request timed out after %ss", timeout)
         raise LLMError("Ollama request timed out. Try a smaller model.") from exc
+    except requests.HTTPError as exc:
+        logger.error("Ollama HTTP error: %s", exc)
+        raise LLMError(f"Ollama request failed: {exc}") from exc
+    except requests.RequestException as exc:
+        logger.error("Ollama request failed: %s", exc)
+        raise LLMError(f"Ollama request failed: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        logger.error("Ollama returned invalid JSON")
+        raise LLMError("Ollama returned an invalid response.") from exc
 
-    data = response.json()
     content = data.get("message", {}).get("content")
     if not content:
         logger.error("Ollama returned empty response")

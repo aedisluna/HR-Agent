@@ -2,17 +2,6 @@ window.HrAgentJobCard = {
   _applicationId: null,
   _notesTimer: null,
 
-  STATUS_LABELS: {
-    draft: "Saved",
-    applied: "Applied",
-    waiting: "Waiting",
-    recruiter_screen: "Screen",
-    test_task: "Test task",
-    interview: "Interview",
-    rejected: "Rejected",
-    offer: "Offer",
-  },
-
   async refresh(payload) {
     const requestPayload = HrAgentActions._payloadForRequest(payload);
     HrAgentPanel.setJobTitle(

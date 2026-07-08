@@ -1,5 +1,10 @@
-const LAUNCHER_BASE = "http://127.0.0.1:17890";
-const LAUNCHER_CMD = 'python "H:\\Projects\\HR Agent\\scripts\\launcher.py"';
+const LAUNCHER_CMD = "python scripts/launcher.py";
+const EXPECTED_API_MAJOR_MINOR = "0.5";
+
+function apiVersionCompatible(version) {
+  if (!version) return true;
+  return String(version).split(".").slice(0, 2).join(".") === EXPECTED_API_MAJOR_MINOR;
+}
 
 window.HrAgentBackend = {
   async launcherRequest(path, options = {}) {
@@ -29,7 +34,7 @@ window.HrAgentBackend = {
   async getStatus() {
     try {
       const health = await HrAgentApi.health();
-      const versionOk = !health.version || health.version === "0.3.0";
+      const versionOk = apiVersionCompatible(health.version);
       return { backend: versionOk, launcher: true };
     } catch (_error) {
       try {
@@ -53,7 +58,7 @@ window.HrAgentBackend = {
     if (!status.launcher) {
       await navigator.clipboard.writeText(LAUNCHER_CMD);
       throw new Error(
-        "Launcher is offline. Command copied to clipboard. Run it once, then press Start backend again."
+        "Launcher is offline. Run `python scripts/launcher.py` from the project root (command copied to clipboard), then press Start backend again."
       );
     }
 
