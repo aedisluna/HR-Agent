@@ -17,10 +17,19 @@ Works with **LinkedIn**, **HH.ru**, and generic ATS pages. Everything runs on yo
 ## Architecture
 
 ```
-Chrome extension  →  FastAPI (port 8001)  →  Ollama (port 11434)
-        ↓                    ↓
-   content scripts      SQLite (memory, analyses, artifacts, metrics)
+Job page → Chrome extension → FastAPI workflow → Ollama
+                                  ↓
+                    SQLite (applications + memory)
+                       ├─ candidate_facts
+                       ├─ job_analyses
+                       ├─ generated_artifacts
+                       ├─ learned_answers
+                       └─ llm_runs
 ```
+
+The workflow is deliberately controlled rather than autonomous: analyze the vacancy,
+retrieve confirmed evidence, generate the document, run deterministic checks, and
+store the result. The model never receives unrestricted database access.
 
 Launcher service on port **17890** starts/stops the backend from the extension.
 
@@ -87,32 +96,46 @@ Verify: http://127.0.0.1:8001/health
 
 ### 6. Seed learned answers (optional)
 
-On first backend start, standard answers are imported into SQLite automatically.
-To re-import after editing YAML files:
+On first backend start, standard answers and confirmed candidate facts are imported
+into SQLite automatically. To refresh file-backed memory after editing YAML or the
+base resume:
 
 ```bash
 curl -X POST http://127.0.0.1:8001/import-profile
 ```
 
+The refresh replaces file-backed `candidate_facts` and adds missing standard-answer
+patterns. Answers learned through the extension are preserved.
+
 ## Usage
 
 1. Open a vacancy on LinkedIn or HH.ru
-2. Click **Analyze** in the side panel
-3. Review fit score, gaps, and suggested pitch
-4. **Generate CV** or **Fill** form fields (always review before submitting)
-5. Track status and notes in the job card
+2. Click **Analyze** to create and save a structured vacancy analysis
+3. Review fit score, gaps, risks, and the suggested pitch
+4. Click **CV** — the generator reuses that exact analysis and retrieves relevant
+   confirmed candidate facts from SQLite
+5. Review the displayed quality score and generated text
+6. Use **Fill** for application fields and cover letters
+7. Submit manually, then track status and notes in the job card
 
 Applications dashboard: http://127.0.0.1:8001/applications/ui
 
 ## Project structure
 
 ```
-app/           FastAPI backend, LLM calls, analyzers
-extension/     Chrome extension (content scripts + side panel)
-prompts/       LLM system prompts
-data/          Your profile (local only; *.example.* templates in repo)
-scripts/       launcher, smoke test, profile setup
-ui/            Applications dashboard (HTML / Streamlit)
+app/
+  main.py             FastAPI endpoints and workflow orchestration
+  analysis_models.py  validated structured vacancy schema
+  memory.py           candidate-fact retrieval and artifact persistence
+  quality.py          deterministic CV quality checks
+  storage.py          SQLite models and sessions
+extension/            Chrome content scripts and side panel
+prompts/              model system prompts
+data/                 local profile and SQLite DB (real data is gitignored)
+scripts/              launcher, smoke test, profile setup
+tests/                offline unit tests for memory, quality, and generation
+ui/                   applications dashboard (HTML / Streamlit)
+CHANGELOG.md           release history
 ```
 
 ## Configuration
@@ -123,25 +146,84 @@ ui/            Applications dashboard (HTML / Streamlit)
 | Backend port | `app/main.py` / launcher | `8001` |
 | Launcher port | `scripts/launcher.py` | `17890` |
 
-## Memory and quality metrics
+## Vacancy memory workflow
 
-After **Analyze**, the backend saves a structured vacancy analysis linked to the
-application URL. **Generate CV** retrieves that analysis and only the profile facts
-most relevant to the vacancy. Generated CVs and cover letters are versioned in
-`generated_artifacts` together with deterministic quality checks.
+1. **Analyze** asks Ollama for validated JSON: score, recommendation, requirements,
+   matches, gaps, risks, ATS keywords, strategy, pitch, and candidate questions.
+2. The analysis is stored in `job_analyses` with the application ID, URL, vacancy
+   content hash, model, and prompt version.
+3. **CV** or **Fill** locates the analysis for the same URL and content hash.
+4. `memory.py` ranks confirmed `candidate_facts` against the vacancy and analysis,
+   then builds a bounded context instead of sending the entire profile.
+5. The generated document is checked and stored in `generated_artifacts`.
 
-Operational and artifact aggregates: http://127.0.0.1:8001/metrics
+If the vacancy text changes, its hash changes and the old structured analysis is not
+reused. Existing pre-0.6.0 Markdown analyses can still be used when the stored vacancy
+text matches.
 
-Re-importing profile files refreshes `candidate_facts` without deleting answers
-that were learned from the browser extension.
+### SQLite data
 
-## Smoke test
+| Table | Purpose |
+|-------|---------|
+| `applications` | vacancy CRM, status, notes, raw job text |
+| `candidate_facts` | confirmed profile/resume facts available for retrieval |
+| `job_analyses` | versioned structured vacancy analyses |
+| `generated_artifacts` | CVs and letters with model, prompt, and quality metadata |
+| `learned_answers` | reusable answers for application forms |
+| `llm_runs` | Ollama task, tokens, durations, status, and errors |
 
-With backend running:
+New tables are created automatically when the backend starts. The local database
+remains `data/applications.db` and is excluded from git.
+
+## Quality and telemetry
+
+Each generated document receives deterministic checks for:
+
+- platform length and formatting constraints;
+- required LinkedIn resume sections;
+- coverage of vacancy keywords confirmed by candidate facts;
+- vacancy keywords used in the document without supporting profile evidence.
+
+The extension displays the score after generation. Full aggregate metrics are
+available at http://127.0.0.1:8001/metrics:
+
+- successful and failed LLM runs;
+- average Ollama duration;
+- generated/evaluated artifact count;
+- quality pass rate and average score.
+
+These checks are guardrails, not a guarantee that a CV is correct. Always review the
+generated document before submitting it.
+
+## Useful endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /health` | backend version and availability |
+| `POST /extension/analyze-page` | analyze and optionally save a vacancy |
+| `POST /extension/generate-cv` | reuse vacancy memory and create an evaluated artifact |
+| `POST /extension/fill-form` | map learned/model answers to detected fields |
+| `POST /import-profile` | refresh candidate facts and add missing answer patterns |
+| `GET /applications/ui` | local application dashboard |
+| `GET /metrics` | model and artifact quality aggregates |
+| `GET /debug/logs` | recent local backend and launcher logs |
+
+## Testing
+
+Offline unit tests do not require Ollama or a running backend:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+For an end-to-end check, start the backend and Ollama, then run:
 
 ```bash
 python scripts/smoke_test.py
 ```
+
+The smoke test exercises the live API and upserts a fixed smoke-test vacancy into
+the local database.
 
 ## Privacy & security
 
