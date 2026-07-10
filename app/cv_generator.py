@@ -1,15 +1,11 @@
+import json
 import re
 
 from app.config import JOB_TEXT_MAX_CHARS, MODEL_CV
 from app.language import language_instruction, resolve_language
 from app.llm import ask_llm
-from app.profile import (
-    format_for_prompt,
-    load_candidate_profile,
-    load_prompt,
-    load_resume,
-    trim_job_text,
-)
+from app.memory import candidate_context_for_query
+from app.profile import load_prompt, trim_job_text
 
 _HH_MARKDOWN_PATTERNS = (
     (re.compile(r"^#{1,6}\s+", re.MULTILINE), ""),
@@ -68,23 +64,26 @@ def generate_tailored_cv(
     role: str | None = None,
     response_language: str = "auto",
     platform: str | None = None,
+    job_analysis: dict | None = None,
 ) -> str:
-    profile = load_candidate_profile()
-    resume = load_resume()
     prompt_name = _cv_prompt_name(platform)
     system_prompt = load_prompt(prompt_name)
     trimmed_job = trim_job_text(job_text, JOB_TEXT_MAX_CHARS)
     num_predict, strip_markdown, forced_language = _cv_generation_options(prompt_name)
     language = forced_language or resolve_language(job_text, response_language)
 
+    analysis_context = json.dumps(job_analysis or {}, ensure_ascii=False, indent=2)
+    retrieval_query = f"{trimmed_job}\n{analysis_context}"
+    candidate_context = candidate_context_for_query(retrieval_query, max_chars=12000)
+
     user_prompt = f"""
 {language_instruction(language)}
 
-Candidate profile:
-{format_for_prompt(profile)}
+Confirmed candidate facts retrieved from memory for this vacancy:
+{candidate_context}
 
-Base resume:
-{resume}
+Structured vacancy analysis from memory:
+{analysis_context}
 
 Target company: {company or "Unknown"}
 Target role: {role or "Unknown"}
@@ -94,7 +93,9 @@ Job description:
 {trimmed_job}
 
 {_cv_user_instructions(prompt_name)}
-Do not add sections about missing skills or job requirements the candidate has not confirmed.
+Use the saved analysis to prioritize confirmed matching requirements and ATS keywords.
+Do not present missing or weak requirements as candidate skills.
+Every factual claim must be supported by the confirmed candidate facts above.
 """
     raw = ask_llm(
         system_prompt,
@@ -102,6 +103,8 @@ Do not add sections about missing skills or job requirements the candidate has n
         timeout=240,
         model=MODEL_CV,
         num_predict=num_predict,
+        temperature=0.2,
+        task=f"generate_cv:{platform or 'generic'}",
     )
     cleaned = _strip_markdown(raw) if strip_markdown else raw.strip()
     return cleaned

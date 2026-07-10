@@ -9,6 +9,7 @@ venv/
 # Runtime / local state
 data/applications.db
 logs/
+output/
 *.log
 
 # Personal profile data (use data/*.example.* as templates)

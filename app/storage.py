@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, Integer, String, Text, create_engine
+from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import DATA_DIR
@@ -36,6 +36,78 @@ class LearnedAnswer(Base):
     answer = Column(Text, nullable=False)
     confidence = Column(String, nullable=False, default="medium")
     requires_confirmation = Column(Boolean, nullable=False, default=True)
+
+
+class CandidateFact(Base):
+    """A confirmed, addressable profile fact available to prompt retrieval."""
+
+    __tablename__ = "candidate_facts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    fact_key = Column(String, nullable=False, unique=True, index=True)
+    category = Column(String, nullable=False, index=True)
+    value_text = Column(Text, nullable=False)
+    source = Column(String, nullable=False, index=True)
+    confidence = Column(String, nullable=False, default="high")
+    active = Column(Boolean, nullable=False, default=True)
+    updated_at = Column(String, nullable=False)
+
+
+class JobAnalysisRecord(Base):
+    """Versioned structured analysis tied to an application/vacancy."""
+
+    __tablename__ = "job_analyses"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), nullable=True, index=True)
+    url = Column(String, nullable=True, index=True)
+    job_hash = Column(String, nullable=False, index=True)
+    model = Column(String, nullable=False)
+    prompt_version = Column(String, nullable=False)
+    analysis_json = Column(Text, nullable=False)
+    rendered_text = Column(Text, nullable=False)
+    created_at = Column(String, nullable=False)
+
+
+class GeneratedArtifact(Base):
+    """A generated CV/letter plus the automatic evaluation attached to it."""
+
+    __tablename__ = "generated_artifacts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), nullable=True, index=True)
+    analysis_id = Column(Integer, ForeignKey("job_analyses.id"), nullable=True)
+    artifact_type = Column(String, nullable=False, index=True)
+    platform = Column(String, nullable=False, default="generic")
+    url = Column(String, nullable=True, index=True)
+    content = Column(Text, nullable=False)
+    model = Column(String, nullable=False)
+    prompt_version = Column(String, nullable=False)
+    quality_score = Column(Float, nullable=True)
+    quality_passed = Column(Boolean, nullable=True)
+    quality_json = Column(Text, nullable=True)
+    created_at = Column(String, nullable=False)
+
+
+class LLMRun(Base):
+    """Operational telemetry returned by Ollama for every model call."""
+
+    __tablename__ = "llm_runs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task = Column(String, nullable=False, index=True)
+    model = Column(String, nullable=False, index=True)
+    status = Column(String, nullable=False, index=True)
+    prompt_chars = Column(Integer, nullable=False)
+    output_chars = Column(Integer, nullable=True)
+    prompt_tokens = Column(Integer, nullable=True)
+    output_tokens = Column(Integer, nullable=True)
+    total_duration_ns = Column(Integer, nullable=True)
+    load_duration_ns = Column(Integer, nullable=True)
+    prompt_eval_duration_ns = Column(Integer, nullable=True)
+    eval_duration_ns = Column(Integer, nullable=True)
+    error = Column(Text, nullable=True)
+    created_at = Column(String, nullable=False)
 
 
 def get_database_url() -> str:

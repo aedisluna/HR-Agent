@@ -6,6 +6,7 @@ import yaml
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -15,7 +16,18 @@ from app.cv_generator import generate_tailored_cv
 from app.config import APP_VERSION, APPLICATION_STATUSES, MODEL, MODEL_FAST, PROJECT_ROOT
 from app.llm import LLMError
 from app.logging_setup import BACKEND_LOG, LAUNCHER_LOG, clear_log_files, read_log_tail, setup_logging
+from app.memory import (
+    all_candidate_fact_text,
+    analysis_dict,
+    find_application,
+    job_text_hash,
+    latest_job_analysis,
+    save_generated_artifact,
+    save_job_analysis,
+    sync_candidate_facts,
+)
 from app.platforms.ats import map_form_fields
+from app.quality import evaluate_cv
 from app.profile import (
     ProfileDataError,
     load_candidate_profile,
@@ -48,7 +60,17 @@ from app.schemas import (
     LearnedAnswerResponse,
     TailoredCvRequest,
 )
-from app.storage import Application, LearnedAnswer, SessionLocal, get_db, init_db, utc_now_iso
+from app.storage import (
+    Application,
+    GeneratedArtifact,
+    JobAnalysisRecord,
+    LLMRun,
+    LearnedAnswer,
+    SessionLocal,
+    get_db,
+    init_db,
+    utc_now_iso,
+)
 
 setup_logging()
 logger = logging.getLogger("hr_agent.api")
@@ -59,6 +81,8 @@ async def lifespan(_app: FastAPI):
     init_db()
     db = SessionLocal()
     try:
+        fact_count = sync_candidate_facts(db)
+        logger.info("Candidate memory synchronized: %s facts", fact_count)
         learned_count = db.query(LearnedAnswer).count()
         if learned_count == 0:
             seeded = seed_from_data_files(replace_existing=True)
@@ -184,6 +208,7 @@ def root():
     <li><a href="/applications">/applications</a> — saved applications JSON</li>
     <li><a href="/applications/ui">/applications/ui</a> — applications dashboard</li>
     <li><a href="/learned-answers">/learned-answers</a> — standard answers DB</li>
+    <li><a href="/metrics">/metrics</a> — model and artifact quality metrics</li>
     <li><a href="/debug/logs">/debug/logs</a> — recent backend logs</li>
   </ul>
   <p>For the visual UI, run: <code>streamlit run ui/streamlit_app.py</code></p>
@@ -241,10 +266,12 @@ def get_profile():
 
 
 @app.post("/import-profile")
-def import_profile():
-    count = seed_from_data_files(replace_existing=True)
+def import_profile(db: Session = Depends(get_db)):
+    count = seed_from_data_files(replace_existing=False)
+    fact_count = sync_candidate_facts(db)
     return {
         "imported_learned_answers": count,
+        "candidate_facts": fact_count,
         "profile_files": [
             "candidate_profile.yaml",
             "standard_answers.yaml",
@@ -325,6 +352,14 @@ def analyze_and_save_endpoint(
         db.add(application)
         db.commit()
         db.refresh(application)
+        save_job_analysis(
+            db,
+            analysis=analysis["structured"],
+            rendered_text=analysis["result"],
+            job_text=request.job_text,
+            application_id=application.id,
+            url=request.url,
+        )
 
     return {
         "analysis": analysis,
@@ -406,6 +441,12 @@ def delete_application(application_id: int, db: Session = Depends(get_db)):
     application = db.get(Application, application_id)
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
+    db.query(GeneratedArtifact).filter(
+        GeneratedArtifact.application_id == application_id
+    ).delete(synchronize_session=False)
+    db.query(JobAnalysisRecord).filter(
+        JobAnalysisRecord.application_id == application_id
+    ).delete(synchronize_session=False)
     db.delete(application)
     db.commit()
     return {"deleted": True}
@@ -469,6 +510,14 @@ def extension_analyze_page(
             generated_cover_letter=cover_letter or None,
             analysis_result=analysis.get("result"),
         )
+        save_job_analysis(
+            db,
+            analysis=analysis["structured"],
+            rendered_text=analysis["result"],
+            job_text=request.job_text,
+            application_id=application.id,
+            url=request.url,
+        )
 
     return {
         "analysis": analysis,
@@ -508,6 +557,7 @@ def extension_fill_form(
             platform=request.platform,
             company=request.company,
             role=request.role or request.title,
+            url=request.url,
         )
     except LLMError as exc:
         raise _handle_llm_error(exc) from exc
@@ -609,6 +659,58 @@ def extension_save_answer(
     return learned
 
 
+@app.get("/metrics")
+def get_metrics(db: Session = Depends(get_db)):
+    llm_total = db.query(LLMRun).count()
+    llm_ok = db.query(LLMRun).filter(LLMRun.status == "ok").count()
+    artifacts_total = db.query(GeneratedArtifact).count()
+    quality_count = (
+        db.query(GeneratedArtifact)
+        .filter(GeneratedArtifact.quality_score.is_not(None))
+        .count()
+    )
+    quality_passed = (
+        db.query(GeneratedArtifact)
+        .filter(GeneratedArtifact.quality_passed.is_(True))
+        .count()
+    )
+    avg_quality = (
+        db.query(func.avg(GeneratedArtifact.quality_score))
+        .filter(GeneratedArtifact.quality_score.is_not(None))
+        .scalar()
+    )
+    avg_duration_ns = (
+        db.query(func.avg(LLMRun.total_duration_ns))
+        .filter(LLMRun.status == "ok")
+        .scalar()
+    )
+    return {
+        "llm_runs": {
+            "total": llm_total,
+            "successful": llm_ok,
+            "success_rate": round(llm_ok / llm_total, 3) if llm_total else None,
+            "average_duration_ms": (
+                round(avg_duration_ns / 1_000_000, 1)
+                if avg_duration_ns is not None
+                else None
+            ),
+        },
+        "artifacts": {
+            "total": artifacts_total,
+            "evaluated": quality_count,
+            "passed": quality_passed,
+            "pass_rate": (
+                round(quality_passed / quality_count, 3)
+                if quality_count
+                else None
+            ),
+            "average_quality_score": (
+                round(float(avg_quality), 2) if avg_quality is not None else None
+            ),
+        },
+    }
+
+
 @app.post("/generate-tailored-cv")
 def generate_tailored_cv_endpoint(request: TailoredCvRequest):
     try:
@@ -624,21 +726,69 @@ def generate_tailored_cv_endpoint(request: TailoredCvRequest):
 
 
 @app.post("/extension/generate-cv")
-def extension_generate_cv(request: ExtensionGenerateCvRequest):
+def extension_generate_cv(
+    request: ExtensionGenerateCvRequest,
+    db: Session = Depends(get_db),
+):
+    application = find_application(
+        db,
+        application_id=request.application_id,
+        url=request.url,
+    )
+    analysis_record = latest_job_analysis(
+        db,
+        application_id=application.id if application else request.application_id,
+        url=request.url,
+        job_text=request.job_text,
+    )
+    saved_analysis = analysis_dict(analysis_record)
+    if (
+        saved_analysis is None
+        and application
+        and application.analysis_result
+        and application.raw_job_text
+        and job_text_hash(application.raw_job_text) == job_text_hash(request.job_text)
+    ):
+        saved_analysis = {"legacy_analysis": application.analysis_result}
+
     try:
         cv_text = generate_tailored_cv(
             job_text=request.job_text,
-            company=request.company,
-            role=request.role or request.title,
+            company=request.company or (application.company if application else None),
+            role=request.role or request.title or (application.role if application else None),
             response_language=request.response_language,
             platform=request.platform,
+            job_analysis=saved_analysis,
         )
     except LLMError as exc:
         raise _handle_llm_error(exc) from exc
+
+    quality = evaluate_cv(
+        cv_text,
+        platform=request.platform,
+        analysis=saved_analysis,
+        confirmed_facts_text=all_candidate_fact_text(db),
+    )
+    artifact_type = "cover_letter" if request.platform.lower() == "hh" else "cv"
+    artifact = save_generated_artifact(
+        db,
+        application_id=application.id if application else None,
+        analysis_id=analysis_record.id if analysis_record else None,
+        artifact_type=artifact_type,
+        platform=request.platform,
+        url=request.url,
+        content=cv_text,
+        model=MODEL,
+        quality=quality,
+    )
 
     return {
         "cv": cv_text,
         "platform": request.platform,
         "url": request.url,
         "response_language": request.response_language,
+        "application_id": application.id if application else None,
+        "artifact_id": artifact.id,
+        "analysis_reused": saved_analysis is not None,
+        "quality": quality,
     }

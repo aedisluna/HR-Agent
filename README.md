@@ -10,6 +10,8 @@ Works with **LinkedIn**, **HH.ru**, and generic ATS pages. Everything runs on yo
 - **Tailored CV / cover letter** — platform-specific prompts (HH.ru, LinkedIn, generic)
 - **Form fill assist** — maps form fields to your standard answers (manual submit only)
 - **Application CRM** — SQLite tracker + web dashboard
+- **Vacancy memory** — structured analyses are reused when writing a CV
+- **Quality metrics** — saved artifacts, format/grounding checks, and Ollama telemetry
 - **Chrome side panel** — analyze, generate, fill, notes, status on the job page
 
 ## Architecture
@@ -17,7 +19,7 @@ Works with **LinkedIn**, **HH.ru**, and generic ATS pages. Everything runs on yo
 ```
 Chrome extension  →  FastAPI (port 8001)  →  Ollama (port 11434)
         ↓                    ↓
-   content scripts      SQLite (applications.db)
+   content scripts      SQLite (memory, analyses, artifacts, metrics)
 ```
 
 Launcher service on port **17890** starts/stops the backend from the extension.
@@ -120,6 +122,18 @@ ui/            Applications dashboard (HTML / Streamlit)
 | Ollama model | `app/config.py` | `llama3.1-8b-q8-local` |
 | Backend port | `app/main.py` / launcher | `8001` |
 | Launcher port | `scripts/launcher.py` | `17890` |
+
+## Memory and quality metrics
+
+After **Analyze**, the backend saves a structured vacancy analysis linked to the
+application URL. **Generate CV** retrieves that analysis and only the profile facts
+most relevant to the vacancy. Generated CVs and cover letters are versioned in
+`generated_artifacts` together with deterministic quality checks.
+
+Operational and artifact aggregates: http://127.0.0.1:8001/metrics
+
+Re-importing profile files refreshes `candidate_facts` without deleting answers
+that were learned from the browser extension.
 
 ## Smoke test
 

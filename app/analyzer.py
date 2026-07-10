@@ -1,8 +1,12 @@
 import re
 
+from pydantic import ValidationError
+
+from app.analysis_models import JobAnalysis, render_job_analysis
 from app.config import JOB_TEXT_MAX_CHARS, MODEL_FAST
 from app.language import language_instruction, resolve_language
-from app.llm import ask_llm
+from app.llm import LLMError, ask_llm
+from app.memory import candidate_context_for_query
 from app.profile import (
     format_for_prompt,
     load_candidate_profile,
@@ -156,53 +160,64 @@ def analyze_job(
     candidate_profile: dict | None = None,
     response_language: str = "auto",
 ) -> dict:
-    profile = candidate_profile or load_candidate_profile()
-    resume = load_resume()
-    interview_stories = load_interview_stories()
-    missing_data = load_missing_data()
+    trimmed_job = trim_job_text(job_text, JOB_TEXT_MAX_CHARS)
+    if candidate_profile is not None:
+        candidate_context = format_for_prompt(candidate_profile)
+    else:
+        candidate_context = candidate_context_for_query(trimmed_job, max_chars=10000)
+
+    missing_context = format_for_prompt(load_missing_data())[:4000]
     language = resolve_language(job_text, response_language)
     system_prompt = load_prompt("analyze_job")
-    trimmed_job = trim_job_text(job_text, JOB_TEXT_MAX_CHARS)
-
     user_prompt = f"""
 {language_instruction(language)}
 
-Candidate profile:
-{format_for_prompt(profile)}
-
-Resume:
-{resume}
-
-Interview stories:
-{format_for_prompt(interview_stories)}
+Confirmed candidate facts retrieved for this vacancy:
+{candidate_context}
 
 Facts that require confirmation before use:
-{format_for_prompt(missing_data)}
+{missing_context}
 
 Job description:
 {trimmed_job}
+
+Return only data matching the supplied JSON schema. Keep requirements atomic and
+put important exact ATS terms into keywords. Never mark an unconfirmed fact as a match.
 """
-    result = ask_llm(
+    raw = ask_llm(
         system_prompt,
         user_prompt,
         model=MODEL_FAST,
         num_predict=1500,
+        response_schema=JobAnalysis,
+        temperature=0,
+        task="analyze_job",
     )
-    fit_score = _extract_fit_score(result)
-    should_apply = _extract_should_apply(result)
+    try:
+        structured = JobAnalysis.model_validate_json(raw)
+    except ValidationError as exc:
+        raise LLMError(f"Ollama returned invalid structured job analysis: {exc}") from exc
+
+    provisional_text = render_job_analysis(structured)
     fit_score, should_apply = _reconcile_fit_score(
-        fit_score,
-        should_apply,
+        structured.fit_score,
+        structured.should_apply,
         trimmed_job,
-        result,
+        provisional_text,
     )
-    result = _patch_analysis_scores(result, fit_score, should_apply)
+    if fit_score is not None:
+        structured.fit_score = fit_score
+    if should_apply is not None:
+        structured.should_apply = should_apply
+
+    result = render_job_analysis(structured)
     return {
         "result": result,
-        "fit_score": fit_score,
-        "should_apply": should_apply,
-        "pitch": _extract_pitch(result),
-        "candidate_questions": extract_candidate_questions(result),
+        "structured": structured.model_dump(),
+        "fit_score": structured.fit_score,
+        "should_apply": structured.should_apply,
+        "pitch": structured.short_pitch,
+        "candidate_questions": structured.questions_for_candidate,
     }
 
 
@@ -246,4 +261,6 @@ Job description:
         user_prompt,
         model=MODEL_FAST,
         num_predict=1200,
+        temperature=0.2,
+        task="generate_cover_letter",
     )

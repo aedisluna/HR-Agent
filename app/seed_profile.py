@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from app.storage import LearnedAnswer, SessionLocal, init_db
@@ -77,16 +78,30 @@ def seed_learned_answers(
     try:
         if replace_existing:
             db.query(LearnedAnswer).delete()
+            existing_patterns: set[str] = set()
+        else:
+            existing_patterns = {
+                re.sub(r"\s+", " ", item.question_pattern.lower().strip())
+                for item in db.query(LearnedAnswer).all()
+            }
 
         rows = _flatten_standard_answers(standard_answers)
         if interview_stories:
             rows.extend(_flatten_interview_stories(interview_stories))
 
+        imported = 0
         for row in rows:
+            normalized = re.sub(
+                r"\s+", " ", row["question_pattern"].lower().strip()
+            )
+            if normalized in existing_patterns:
+                continue
             db.add(LearnedAnswer(**row))
+            existing_patterns.add(normalized)
+            imported += 1
 
         db.commit()
-        return len(rows)
+        return imported
     finally:
         db.close()
 

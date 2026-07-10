@@ -80,53 +80,19 @@ Consistency rules:
 
 
 
-Return concise, practical output in the following structure:
+Return only JSON matching the supplied schema. Field guidance:
 
+- fit_score: integer 0-100 following the strict rubric above
+- should_apply: exactly yes, maybe, or no
+- score_reason: one concise reason tied to role type and must-haves
+- role_type and seniority: normalized vacancy classification
+- must_have_requirements and nice_to_have_requirements: atomic requirements
+- matching_requirements: only requirements supported by confirmed candidate facts
+- missing_or_weak_requirements: gaps, including role-type mismatches
+- risks: vacancy red flags and material mismatch concerns
+- keywords: 8-15 exact ATS terms from the vacancy, without inventing candidate skills
+- application_strategy: how to position the truthful application
+- short_pitch: 2-3 tailored sentences
+- questions_for_candidate: facts that require clarification
 
-
-## Fit Score
-
-`<number>/100` — one-line justification referencing role type and must-haves, not only generic QA skills.
-
-
-
-## Should Apply?
-
-yes / maybe / no — with brief reasoning.
-
-
-
-## Matching Requirements
-
-Bullet list of requirements the candidate clearly matches.
-
-
-
-## Missing or Weak Requirements
-
-Bullet list of gaps or risks. Include role-type mismatches (developer, team lead, etc.) here.
-
-
-
-## Risks
-
-Any red flags in the job posting or mismatch concerns.
-
-
-
-## Application Strategy
-
-How to position the application (what to emphasize, what to address upfront).
-
-
-
-## Short Pitch
-
-2-3 sentences tailored to this role.
-
-
-
-## Questions for the Candidate
-
-List anything you cannot answer from the profile and need the candidate to clarify.
-
+Never put Markdown headings or prose outside the JSON object.

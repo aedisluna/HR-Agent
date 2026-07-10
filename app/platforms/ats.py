@@ -9,6 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.answer_generator import generate_answers
 from app.cv_generator import generate_tailored_cv
+from app.memory import (
+    analysis_dict,
+    find_application,
+    job_text_hash,
+    latest_job_analysis,
+)
 from app.storage import LearnedAnswer
 
 
@@ -134,6 +140,7 @@ def map_form_fields(
     platform: str = "generic",
     company: str | None = None,
     role: str | None = None,
+    url: str | None = None,
 ) -> list[dict[str, Any]]:
     learned = db.query(LearnedAnswer).all()
     questions = [field.get("label") or field.get("name") or field.get("id") or "Field" for field in fields]
@@ -156,12 +163,29 @@ def map_form_fields(
 
     cover_letter_text: str | None = None
     if use_llm and any(_is_cover_letter_field(q) for q in questions):
+        application = find_application(db, url=url)
+        analysis_record = latest_job_analysis(
+            db,
+            application_id=application.id if application else None,
+            url=url,
+            job_text=job_text,
+        )
+        saved_analysis = analysis_dict(analysis_record)
+        if (
+            saved_analysis is None
+            and application
+            and application.analysis_result
+            and application.raw_job_text
+            and job_text_hash(application.raw_job_text) == job_text_hash(job_text)
+        ):
+            saved_analysis = {"legacy_analysis": application.analysis_result}
         cover_letter_text = generate_tailored_cv(
             job_text=job_text,
             company=company,
             role=role,
             response_language=response_language,
             platform=platform,
+            job_analysis=saved_analysis,
         )
 
     results = []

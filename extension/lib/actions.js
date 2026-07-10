@@ -126,14 +126,24 @@ window.HrAgentActions = {
         this.withLanguage({ ...requestPayload, save_application: false })
       );
       const cv = result.cv || "";
+      const qualityScore = result.quality?.score;
+      const qualitySuffix =
+        qualityScore == null ? "" : ` · quality ${Math.round(qualityScore)}/100`;
+      const memorySuffix = result.analysis_reused ? " · vacancy memory" : "";
       HrAgentPanel.setOutput(cv);
 
       const fields = this._extractFields(requestPayload);
       const inserted = HrAgentFiller.fillCoverLetterFields(fields, cv);
       if (inserted) {
-        HrAgentPanel.setStatus(`CV ready — inserted into ${inserted} field(s). Review before submit.`, "success");
+        HrAgentPanel.setStatus(
+          `CV ready${qualitySuffix}${memorySuffix} — inserted into ${inserted} field(s). Review before submit.`,
+          "success"
+        );
       } else {
-        HrAgentPanel.setStatus("CV ready — review and copy.", "success");
+        HrAgentPanel.setStatus(
+          `CV ready${qualitySuffix}${memorySuffix} — review and copy.`,
+          "success"
+        );
       }
       HrAgentLogger.info("Generate CV finished", {
         chars: cv.length,

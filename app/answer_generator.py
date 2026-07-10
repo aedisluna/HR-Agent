@@ -58,4 +58,6 @@ Questions from application form:
         user_prompt,
         model=MODEL_FAST,
         num_predict=1800,
+        temperature=0.2,
+        task="generate_answers",
     )

@@ -138,6 +138,7 @@ class ExtensionAnalyzeRequest(BaseModel):
 class ExtensionGenerateCvRequest(BaseModel):
     platform: str
     url: str
+    application_id: Optional[int] = None
     title: Optional[str] = None
     company: Optional[str] = None
     role: Optional[str] = None
