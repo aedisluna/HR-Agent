@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "HR Agent Assistant",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Local job application assistant for LinkedIn, HH.ru and external ATS pages.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [

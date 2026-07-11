@@ -157,6 +157,11 @@ CHANGELOG.md           release history
    then builds a bounded context instead of sending the entire profile.
 5. The generated document is checked and stored in `generated_artifacts`.
 
+The backend validates cross-field consistency before saving: every must-have must be
+assessed, matched items must cite evidence, and a high score cannot coexist with zero
+confirmed matches. Invalid structured output is regenerated once with validation
+feedback.
+
 If the vacancy text changes, its hash changes and the old structured analysis is not
 reused. Existing pre-0.6.0 Markdown analyses can still be used when the stored vacancy
 text matches.

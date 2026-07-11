@@ -87,12 +87,21 @@ Return only JSON matching the supplied schema. Field guidance:
 - score_reason: one concise reason tied to role type and must-haves
 - role_type and seniority: normalized vacancy classification
 - must_have_requirements and nice_to_have_requirements: atomic requirements
-- matching_requirements: only requirements supported by confirmed candidate facts
-- missing_or_weak_requirements: gaps, including role-type mismatches
+- requirement_assessments: assess every must-have exactly once, copying the exact
+  requirement text from must_have_requirements
+  - status=matched only when confirmed candidate facts directly support it; include
+    one or more exact candidate fact keys in evidence
+  - status=missing when confirmed facts show the candidate does not meet it
+  - status=unknown when the supplied facts are insufficient; add a concrete question
+    for the candidate
+  - reason: concise explanation of the classification
 - risks: vacancy red flags and material mismatch concerns
 - keywords: 8-15 exact ATS terms from the vacancy, without inventing candidate skills
 - application_strategy: how to position the truthful application
 - short_pitch: 2-3 tailored sentences
 - questions_for_candidate: facts that require clarification
+
+Fit score and should_apply must agree with the number and importance of matched,
+missing, and unknown must-haves. A score of 66 or more requires confirmed matches.
 
 Never put Markdown headings or prose outside the JSON object.

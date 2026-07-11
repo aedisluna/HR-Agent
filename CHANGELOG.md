@@ -5,6 +5,24 @@ All notable changes to HR Agent are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 The project currently uses semantic version numbers for application releases.
 
+## [0.6.1] - 2026-07-11
+
+### Fixed
+
+- Every must-have requirement must now be classified as `matched`, `missing`, or
+  `unknown` with an explanation.
+- Matched requirements must reference concrete candidate-fact evidence.
+- Matching and missing sections are derived from requirement assessments instead of
+  trusting independent optional arrays from the model.
+- Contradictory results such as a high fit score with no confirmed matches are
+  rejected and regenerated once with validation feedback.
+- Empty UI sections now use explicit messages instead of the ambiguous `None`.
+
+### Validation
+
+- Added regression coverage for derived requirement sections and automatic repair of
+  inconsistent structured analysis.
+
 ## [0.6.0] - 2026-07-10
 
 ### Added

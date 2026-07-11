@@ -21,7 +21,7 @@ from app.storage import (
     utc_now_iso,
 )
 
-ANALYSIS_PROMPT_VERSION = "job-analysis-v2"
+ANALYSIS_PROMPT_VERSION = "job-analysis-v3"
 CV_PROMPT_VERSION = "tailored-cv-v2"
 
 _TOKEN_RE = re.compile(r"[A-Za-zА-Яа-яЁё0-9+#.]{2,}")

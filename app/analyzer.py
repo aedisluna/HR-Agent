@@ -2,7 +2,7 @@ import re
 
 from pydantic import ValidationError
 
-from app.analysis_models import JobAnalysis, render_job_analysis
+from app.analysis_models import JobAnalysis, analysis_payload, render_job_analysis
 from app.config import JOB_TEXT_MAX_CHARS, MODEL_FAST
 from app.language import language_instruction, resolve_language
 from app.llm import LLMError, ask_llm
@@ -155,6 +155,76 @@ def extract_candidate_questions(analysis: str) -> list[str]:
     return questions
 
 
+def _validate_assessment_evidence(
+    analysis: JobAnalysis,
+    candidate_context: str,
+) -> JobAnalysis:
+    available_keys = {
+        line.partition(":")[0].strip()
+        for line in candidate_context.splitlines()
+        if ":" in line
+    }
+    invalid: list[str] = []
+    for assessment in analysis.requirement_assessments:
+        if assessment.status != "matched":
+            continue
+        for evidence_key in assessment.evidence:
+            if evidence_key not in available_keys:
+                invalid.append(evidence_key)
+    if invalid:
+        raise ValueError(
+            "matched assessments reference unavailable candidate fact keys: "
+            + ", ".join(sorted(set(invalid)))
+        )
+    return analysis
+
+
+def _request_structured_analysis(
+    system_prompt: str,
+    user_prompt: str,
+    candidate_context: str,
+) -> JobAnalysis:
+    raw = ask_llm(
+        system_prompt,
+        user_prompt,
+        model=MODEL_FAST,
+        num_predict=1800,
+        response_schema=JobAnalysis,
+        temperature=0,
+        task="analyze_job",
+    )
+    try:
+        structured = JobAnalysis.model_validate_json(raw)
+        return _validate_assessment_evidence(structured, candidate_context)
+    except (ValidationError, ValueError) as first_exc:
+        repair_prompt = f"""{user_prompt}
+
+The previous response failed validation:
+{first_exc}
+
+Regenerate the complete JSON object. Assess every must-have requirement using the
+exact same requirement text. A matched item must cite one or more exact candidate
+fact keys that appear before a colon in the confirmed context. Keep fit_score and
+should_apply consistent.
+"""
+        repaired = ask_llm(
+            system_prompt,
+            repair_prompt,
+            model=MODEL_FAST,
+            num_predict=1800,
+            response_schema=JobAnalysis,
+            temperature=0,
+            task="analyze_job_retry",
+        )
+        try:
+            structured = JobAnalysis.model_validate_json(repaired)
+            return _validate_assessment_evidence(structured, candidate_context)
+        except (ValidationError, ValueError) as exc:
+            raise LLMError(
+                f"Ollama returned invalid structured job analysis after retry: {exc}"
+            ) from exc
+
+
 def analyze_job(
     job_text: str,
     candidate_profile: dict | None = None,
@@ -184,19 +254,11 @@ Job description:
 Return only data matching the supplied JSON schema. Keep requirements atomic and
 put important exact ATS terms into keywords. Never mark an unconfirmed fact as a match.
 """
-    raw = ask_llm(
+    structured = _request_structured_analysis(
         system_prompt,
         user_prompt,
-        model=MODEL_FAST,
-        num_predict=1500,
-        response_schema=JobAnalysis,
-        temperature=0,
-        task="analyze_job",
+        candidate_context,
     )
-    try:
-        structured = JobAnalysis.model_validate_json(raw)
-    except ValidationError as exc:
-        raise LLMError(f"Ollama returned invalid structured job analysis: {exc}") from exc
 
     provisional_text = render_job_analysis(structured)
     fit_score, should_apply = _reconcile_fit_score(
@@ -213,7 +275,7 @@ put important exact ATS terms into keywords. Never mark an unconfirmed fact as a
     result = render_job_analysis(structured)
     return {
         "result": result,
-        "structured": structured.model_dump(),
+        "structured": analysis_payload(structured),
         "fit_score": structured.fit_score,
         "should_apply": structured.should_apply,
         "pitch": structured.short_pitch,
