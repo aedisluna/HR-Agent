@@ -1,5 +1,5 @@
 const LAUNCHER_CMD = "python scripts/launcher.py";
-const EXPECTED_API_MAJOR_MINOR = "0.5";
+const EXPECTED_API_MAJOR_MINOR = "0.6";
 
 function apiVersionCompatible(version) {
   if (!version) return true;

@@ -46,6 +46,8 @@ The project currently uses semantic version numbers for application releases.
 
 ### Fixed
 
+- Chrome extension API compatibility now targets backend 0.6.x, and the extension
+  manifest version matches the backend application version.
 - Re-importing profile data no longer deletes answers learned through the browser
   extension.
 - Profile import now adds only missing standard-answer patterns.
