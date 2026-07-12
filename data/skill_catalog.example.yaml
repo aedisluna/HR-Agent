@@ -1,0 +1,37 @@
+# Copy to skill_catalog.yaml and adapt labels and aliases to your own profile.
+skills:
+  - label: Manual testing
+    aliases:
+      - manual testing
+      - manual qa
+      - manual + api
+      - "ручное тестирование"
+      - "ручн"
+  - label: Postman
+    aliases: [postman]
+  - label: Swagger
+    aliases: [swagger]
+  - label: REST API
+    aliases: [rest api, rest-api, api testing, api and integration]
+  - label: SOAP
+    aliases: [soap]
+  - label: Apache Kafka
+    aliases: [kafka]
+  - label: SQL
+    aliases: [sql, postgresql, dbeaver]
+  - label: Bash
+    aliases: [bash]
+  - label: Java
+    aliases: [java]
+  - label: Python
+    aliases: [python]
+  - label: Selenium
+    aliases: [selenium]
+  - label: Jira
+    aliases: [jira]
+  - label: Agile
+    aliases: [agile, scrum]
+  - label: CI/CD
+    aliases: [ci/cd, cicd]
+  - label: Docker
+    aliases: [docker]

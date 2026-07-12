@@ -19,6 +19,7 @@ Copies `*.example.*` → local files **only if they do not exist**.
 | `standard_answers.yaml` | `standard_answers.example.yaml` |
 | `interview_stories.yaml` | `interview_stories.example.yaml` |
 | `missing_data.yaml` | `missing_data.example.yaml` |
+| `skill_catalog.yaml` | `skill_catalog.example.yaml` |
 
 Runtime (also gitignored): `applications.db`, `logs/`
 
@@ -29,6 +30,7 @@ Runtime (also gitignored): `applications.db`, `logs/`
 3. **`standard_answers.yaml`** — form answers under sections like `current_project`, `hh_ru`
 4. **`interview_stories.yaml`** — behavioral stories in RU + EN under `stories:`
 5. **`missing_data.yaml`** — facts the agent must confirm before claiming
+6. **`skill_catalog.yaml`** — labels and aliases used to derive skills from your profile and resume
 
 Current project details live inside **`candidate_profile.yaml`** → `current_project_details`, not in a separate file.
 

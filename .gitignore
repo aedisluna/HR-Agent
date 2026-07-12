@@ -18,6 +18,7 @@ data/resume.md
 data/standard_answers.yaml
 data/interview_stories.yaml
 data/missing_data.yaml
+data/skill_catalog.yaml
 
 # OS / editor
 .DS_Store

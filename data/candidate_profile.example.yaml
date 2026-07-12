@@ -14,6 +14,10 @@ identity:
     - "Netherlands"
     - "Germany"
     - "Remote EU"
+  email: "your@email.com"
+  phone: "+0000000000"
+  telegram: "@your_username"
+  linkedin_url: "https://www.linkedin.com/in/your-profile"
 
 positioning:
   conservative:

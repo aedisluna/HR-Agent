@@ -13,6 +13,9 @@ Hard rules:
 - Mirror the job title and top 8-12 JD keywords naturally in Summary, Skills, and Experience.
 - Prefer the XYZ pattern where facts support it: "Accomplished [X] as measured by [Y] by doing [Z]" — but never invent Y (metrics).
 
+- Do NOT add a dedicated current-project paragraph (migration, Kafka, monolith/microservices, legacy systems).
+- Prefer past confirmed projects for PROFESSIONAL EXPERIENCE when they match the JD; keep current role to one neutral line only if needed.
+
 Output structure:
 
 [Full Name]

@@ -4,9 +4,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.memory import (
+    _build_skills_inventory,
     analysis_dict,
     latest_job_analysis,
     retrieve_candidate_context,
+    retrieve_candidate_context_for_analysis,
     save_generated_artifact,
     save_job_analysis,
 )
@@ -145,6 +147,67 @@ class RetrievalTests(unittest.TestCase):
         self.assertIn("identity.name: Alex Doe", context)
         self.assertIn("projects.api.tools.0: Postman", context)
         self.assertNotIn("Appium", context)
+
+
+    def test_analysis_context_includes_resume_and_skills_inventory(self):
+        profile = {
+            "experience": {"strong_domains": ["API and integration testing"]},
+            "projects": {"demo": {"api": "REST API testing with Postman"}},
+        }
+        resume = (
+            "Middle QA Engineer\n"
+            "Manual + API testing\n"
+            "Tools: Postman, Kafka, SQL"
+        )
+        inventory = _build_skills_inventory(profile, resume)
+        self.assertIn("Manual testing", inventory)
+        self.assertIn("Postman", inventory)
+        self.assertIn("REST API", inventory)
+        self.assertIn("Apache Kafka", inventory)
+
+    def test_analysis_context_prioritizes_resume_and_projects(self):
+        self.db.add_all(
+            [
+                CandidateFact(
+                    fact_key="resume.0",
+                    category="resume",
+                    value_text="Tools: Postman, Kafka, manual testing",
+                    source="resume",
+                    confidence="high",
+                    active=True,
+                    updated_at="2026-01-01",
+                ),
+                CandidateFact(
+                    fact_key="skills_inventory",
+                    category="skills",
+                    value_text="Manual testing; Postman; Apache Kafka",
+                    source="derived",
+                    confidence="high",
+                    active=True,
+                    updated_at="2026-01-01",
+                ),
+                CandidateFact(
+                    fact_key="misc.note",
+                    category="misc",
+                    value_text="Unrelated note",
+                    source="candidate_profile",
+                    confidence="high",
+                    active=True,
+                    updated_at="2026-01-01",
+                ),
+            ]
+        )
+        self.db.commit()
+
+        context = retrieve_candidate_context_for_analysis(
+            self.db,
+            "QA vacancy requires manual testing, Postman and Kafka",
+            max_chars=2000,
+        )
+
+        self.assertIn("skills_inventory:", context)
+        self.assertIn("resume.0:", context)
+        self.assertNotIn("misc.note", context)
 
 
 if __name__ == "__main__":

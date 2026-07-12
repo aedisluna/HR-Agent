@@ -30,16 +30,18 @@ Output structure (plain text, short paragraphs separated by blank lines):
 Откликаюсь на вакансию [название из JD] в [компания]. Одно предложение: почему эта роль/продукт/домен вам подходит (только если есть факт в профиле).
 
 Абзац 2 — почему я подхожу
-2–3 предложения: стаж + релевантные домены + 1–2 конкретных достижения или scope (web/API/БД/автотесты — по JD). Ключевые слова из вакансии вплетены естественно.
+2–3 предложения: стаж + релевантные домены + 1–2 конкретных достижения или scope (web/API/БД/автотесты — по JD). Ключевые слова из вакансии вплетены естественно. Без отдельного абзаца про текущего работодателя или текущий проект.
 
 Абзац 3 — ключевые навыки под вакансию
 Одна строка через запятую, 8–12 навыков/инструментов из JD, которые подтверждены профилем. Самые важные для вакансии — в начале.
 
-Абзац 4 — релевантный опыт (кратко)
-1–2 предложения о самом релевантном проекте: продукт, стек, что тестировали. Не дублировать резюме целиком.
-
-Абзац 5 — завершение
+Абзац 4 — завершение
 Готов обсудить опыт на собеседовании. Вежливый call-to-action, без «жду вашего ответа».
+
+Do NOT include:
+- A dedicated paragraph about the current employer or current project (migration, Kafka, monolith/microservices, legacy systems, test data on legacy side, rollback flows, etc.).
+- Deep technical narrative about the present job — the attached resume already covers it.
+- Past projects only as one short phrase inside абзац 2 if directly relevant to the vacancy — never as a standalone project paragraph.
 
 Quality bar:
 - First 2 lines must hook a recruiter skimming 200 applications.

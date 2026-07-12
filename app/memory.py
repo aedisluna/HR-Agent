@@ -10,7 +10,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.config import MODEL_FAST
-from app.profile import load_candidate_profile, load_resume
+from app.profile import load_candidate_profile, load_resume, load_skill_catalog
 from app.storage import (
     Application,
     CandidateFact,
@@ -26,6 +26,17 @@ CV_PROMPT_VERSION = "tailored-cv-v2"
 
 _TOKEN_RE = re.compile(r"[A-Za-zА-Яа-яЁё0-9+#.]{2,}")
 _ALWAYS_INCLUDE = {"identity", "positioning", "professional_summary", "role_boundaries"}
+_ANALYSIS_PRIORITY_CATEGORIES = {
+    "identity",
+    "positioning",
+    "professional_summary",
+    "role_boundaries",
+    "experience",
+    "projects",
+    "resume",
+    "current_project_details",
+    "skills",
+}
 _STOPWORDS = {
     "and", "the", "with", "for", "from", "this", "that", "или", "для", "как",
     "при", "это", "что", "опыт", "работы", "работа", "требования",
@@ -50,6 +61,41 @@ def _flatten(value: Any, path: str) -> list[tuple[str, str]]:
         rows.append((path, str(value).strip()))
     return rows
 
+
+def _normalized_skill_catalog(
+    catalog: list[dict[str, Any]],
+) -> list[tuple[str, tuple[str, ...]]]:
+    normalized: list[tuple[str, tuple[str, ...]]] = []
+    for item in catalog:
+        label = str(item.get("label", "")).strip()
+        aliases = item.get("aliases", [])
+        if not label or not isinstance(aliases, list):
+            continue
+        needles = tuple(
+            alias.lower()
+            for alias in [label, *aliases]
+            if isinstance(alias, str) and alias.strip()
+        )
+        if needles:
+            normalized.append((label, needles))
+    return normalized
+
+
+def _build_skills_inventory(
+    profile: dict[str, Any],
+    resume: str,
+    *,
+    catalog: list[dict[str, Any]] | None = None,
+) -> str:
+    blob = "\n".join(value for _, value in _flatten(profile, "")).lower()
+    blob = f"{blob}\n{resume.lower()}"
+
+    matched: list[str] = []
+    source_catalog = catalog if catalog is not None else load_skill_catalog()
+    for label, needles in _normalized_skill_catalog(source_catalog):
+        if any(needle in blob for needle in needles):
+            matched.append(label)
+    return "; ".join(matched)
 
 def sync_candidate_facts(db: Session) -> int:
     """Refresh confirmed file-backed facts without touching learned user answers."""
@@ -84,8 +130,19 @@ def sync_candidate_facts(db: Session) -> int:
         for index, part in enumerate(resume_parts)
     )
 
+    skills_inventory = _build_skills_inventory(load_candidate_profile(), load_resume())
+    if skills_inventory:
+        rows.append(
+            {
+                "fact_key": "skills_inventory",
+                "category": "skills",
+                "value_text": skills_inventory,
+                "source": "derived",
+            }
+        )
+
     db.query(CandidateFact).filter(
-        CandidateFact.source.in_(["candidate_profile", "resume"])
+        CandidateFact.source.in_(["candidate_profile", "resume", "derived"])
     ).delete(synchronize_session=False)
     for row in rows:
         db.add(CandidateFact(**row, confidence="high", active=True, updated_at=now))
@@ -106,6 +163,8 @@ def retrieve_candidate_context(
     query: str,
     *,
     max_chars: int = 12000,
+    exclude_key_prefixes: tuple[str, ...] = (),
+    exclude_value_markers: tuple[str, ...] = (),
 ) -> str:
     facts = db.query(CandidateFact).filter(CandidateFact.active.is_(True)).all()
     if not facts:
@@ -115,6 +174,10 @@ def retrieve_candidate_context(
     query_tokens = _tokens(query)
     ranked: list[tuple[int, str]] = []
     for fact in facts:
+        if any(fact.fact_key.startswith(prefix) for prefix in exclude_key_prefixes):
+            continue
+        if any(marker in fact.value_text for marker in exclude_value_markers):
+            continue
         fact_text = f"{fact.fact_key}: {fact.value_text}"
         overlap = len(query_tokens & _tokens(fact_text))
         score = overlap * 10
@@ -135,11 +198,83 @@ def retrieve_candidate_context(
     return "\n".join(selected)
 
 
-def candidate_context_for_query(query: str, *, max_chars: int = 12000) -> str:
+def retrieve_candidate_context_for_analysis(
+    db: Session,
+    query: str,
+    *,
+    max_chars: int = 16000,
+) -> str:
+    facts = db.query(CandidateFact).filter(CandidateFact.active.is_(True)).all()
+    if not facts:
+        sync_candidate_facts(db)
+        facts = db.query(CandidateFact).filter(CandidateFact.active.is_(True)).all()
+
+    priority = [fact for fact in facts if fact.category in _ANALYSIS_PRIORITY_CATEGORIES]
+    other = [fact for fact in facts if fact.category not in _ANALYSIS_PRIORITY_CATEGORIES]
+
+    selected: list[str] = []
+    size = 0
+    for fact in sorted(priority, key=lambda item: item.fact_key):
+        line = f"{fact.fact_key}: {fact.value_text}"
+        selected.append(line)
+        size += len(line) + 1
+
+    query_tokens = _tokens(query)
+    ranked_other: list[tuple[int, str]] = []
+    for fact in other:
+        fact_text = f"{fact.fact_key}: {fact.value_text}"
+        overlap = len(query_tokens & _tokens(fact_text))
+        if overlap:
+            ranked_other.append((overlap * 10, fact_text))
+
+    ranked_other.sort(key=lambda item: (-item[0], item[1]))
+    for _, fact_text in ranked_other:
+        next_size = size + len(fact_text) + 1
+        if next_size > max_chars:
+            continue
+        selected.append(fact_text)
+        size = next_size
+
+    if size <= max_chars:
+        return "\n".join(selected)
+
+    trimmed: list[str] = []
+    running = 0
+    for line in selected:
+        next_size = running + len(line) + 1
+        if next_size > max_chars:
+            break
+        trimmed.append(line)
+        running = next_size
+    return "\n".join(trimmed)
+
+
+def candidate_context_for_query(
+    query: str,
+    *,
+    max_chars: int = 12000,
+    exclude_key_prefixes: tuple[str, ...] = (),
+    exclude_value_markers: tuple[str, ...] = (),
+) -> str:
     init_db()
     db = SessionLocal()
     try:
-        return retrieve_candidate_context(db, query, max_chars=max_chars)
+        return retrieve_candidate_context(
+            db,
+            query,
+            max_chars=max_chars,
+            exclude_key_prefixes=exclude_key_prefixes,
+            exclude_value_markers=exclude_value_markers,
+        )
+    finally:
+        db.close()
+
+
+def candidate_context_for_analysis(query: str, *, max_chars: int = 16000) -> str:
+    init_db()
+    db = SessionLocal()
+    try:
+        return retrieve_candidate_context_for_analysis(db, query, max_chars=max_chars)
     finally:
         db.close()
 

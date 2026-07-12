@@ -1,7 +1,8 @@
 import re
+from pathlib import Path
+from typing import Any
 
 import yaml
-from pathlib import Path
 
 from app.config import DATA_DIR, PROMPTS_DIR
 
@@ -81,6 +82,13 @@ def load_interview_stories() -> dict:
 def load_missing_data() -> dict:
     return load_yaml(_resolve_data_path("missing_data.yaml"))
 
+
+def load_skill_catalog() -> list[dict[str, Any]]:
+    data = load_yaml(_resolve_data_path("skill_catalog.yaml"))
+    skills = data.get("skills", [])
+    if not isinstance(skills, list):
+        raise ProfileDataError("skill_catalog.yaml: 'skills' must be a list")
+    return [item for item in skills if isinstance(item, dict)]
 
 def load_resume() -> str:
     return load_text(_resolve_data_path("resume.md"))

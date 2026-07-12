@@ -14,6 +14,7 @@ COPY_MAP = {
     "resume.example.md": "resume.md",
     "standard_answers.example.yaml": "standard_answers.yaml",
     "interview_stories.example.yaml": "interview_stories.yaml",
+    "skill_catalog.example.yaml": "skill_catalog.yaml",
     "missing_data.example.yaml": "missing_data.yaml",
 }
 

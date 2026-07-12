@@ -18,7 +18,7 @@ Structure (keep compact, ~1200–2000 characters):
 1. HEADER — name, target title aligned with the vacancy, location/relocation line
 2. PROFESSIONAL SUMMARY — 2–4 lines tailored to this role
 3. CORE SKILLS — keyword-rich list matching the vacancy
-4. RELEVANT EXPERIENCE — 1–2 most relevant projects, 2–4 lines each
+4. RELEVANT EXPERIENCE — past projects only, 2–4 lines total; do NOT describe the current employer or current project in a separate block
 5. LANGUAGES — one line
 
 Do NOT add: Interview stories, "remaining requirements", "nice to have", risks, or application strategy sections.

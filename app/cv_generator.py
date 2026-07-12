@@ -7,6 +7,9 @@ from app.llm import ask_llm
 from app.memory import candidate_context_for_query
 from app.profile import load_prompt, trim_job_text
 
+_CV_CONTEXT_EXCLUDE_PREFIXES = ("current_project_details.",)
+_CV_CONTEXT_EXCLUDE_MARKERS = ("Current Project:",)
+
 _HH_MARKDOWN_PATTERNS = (
     (re.compile(r"^#{1,6}\s+", re.MULTILINE), ""),
     (re.compile(r"\*\*([^*]+)\*\*"), r"\1"),
@@ -45,6 +48,7 @@ def _cv_user_instructions(prompt_name: str) -> str:
         return (
             "Generate a hh.ru cover letter (сопроводительное письмо) for this vacancy. "
             "It complements the attached resume — do not duplicate it. "
+            "Do not describe the current employer or current project in a separate paragraph. "
             "Use only confirmed profile and resume facts."
         )
     if prompt_name == "tailored_cv_linkedin":
@@ -74,7 +78,12 @@ def generate_tailored_cv(
 
     analysis_context = json.dumps(job_analysis or {}, ensure_ascii=False, indent=2)
     retrieval_query = f"{trimmed_job}\n{analysis_context}"
-    candidate_context = candidate_context_for_query(retrieval_query, max_chars=12000)
+    candidate_context = candidate_context_for_query(
+        retrieval_query,
+        max_chars=12000,
+        exclude_key_prefixes=_CV_CONTEXT_EXCLUDE_PREFIXES,
+        exclude_value_markers=_CV_CONTEXT_EXCLUDE_MARKERS,
+    )
 
     user_prompt = f"""
 {language_instruction(language)}

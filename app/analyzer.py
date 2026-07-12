@@ -6,7 +6,7 @@ from app.analysis_models import JobAnalysis, analysis_payload, render_job_analys
 from app.config import JOB_TEXT_MAX_CHARS, MODEL_FAST
 from app.language import language_instruction, resolve_language
 from app.llm import LLMError, ask_llm
-from app.memory import candidate_context_for_query
+from app.memory import candidate_context_for_analysis
 from app.profile import (
     format_for_prompt,
     load_candidate_profile,
@@ -234,7 +234,7 @@ def analyze_job(
     if candidate_profile is not None:
         candidate_context = format_for_prompt(candidate_profile)
     else:
-        candidate_context = candidate_context_for_query(trimmed_job, max_chars=10000)
+        candidate_context = candidate_context_for_analysis(trimmed_job, max_chars=16000)
 
     missing_context = format_for_prompt(load_missing_data())[:4000]
     language = resolve_language(job_text, response_language)

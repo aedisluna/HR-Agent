@@ -40,7 +40,7 @@ def sample_analysis() -> JobAnalysis:
 
 class StructuredAnalysisTests(unittest.TestCase):
     @patch(
-        "app.analyzer.candidate_context_for_query",
+        "app.analyzer.candidate_context_for_analysis",
         return_value="projects.api.testing: API testing\nprojects.api.tools.0: Postman",
     )
     @patch("app.analyzer.ask_llm")
@@ -68,7 +68,7 @@ class StructuredAnalysisTests(unittest.TestCase):
 
 
     @patch(
-        "app.analyzer.candidate_context_for_query",
+        "app.analyzer.candidate_context_for_analysis",
         return_value="projects.api.testing: API testing\nprojects.api.tools.0: Postman",
     )
     @patch("app.analyzer.ask_llm")
@@ -111,7 +111,7 @@ class StructuredAnalysisTests(unittest.TestCase):
 
 
     @patch(
-        "app.analyzer.candidate_context_for_query",
+        "app.analyzer.candidate_context_for_analysis",
         return_value="projects.api.testing: API testing\nprojects.api.tools.0: Postman",
     )
     @patch("app.analyzer.ask_llm")

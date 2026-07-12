@@ -90,7 +90,8 @@ Return only JSON matching the supplied schema. Field guidance:
 - requirement_assessments: assess every must-have exactly once, copying the exact
   requirement text from must_have_requirements
   - status=matched only when confirmed candidate facts directly support it; include
-    one or more exact candidate fact keys in evidence
+  one or more exact candidate fact keys in evidence (for example skills_inventory,
+  resume.N, projects.*, experience.*, current_project_details.*)
   - status=missing when confirmed facts show the candidate does not meet it
   - status=unknown when the supplied facts are insufficient; add a concrete question
     for the candidate
