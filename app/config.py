@@ -5,7 +5,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.environ.get("HR_AGENT_DATA_DIR") or PROJECT_ROOT / "data")
 PROMPTS_DIR = PROJECT_ROOT / "prompts"
 
-APP_VERSION = "0.6.2"
+APP_VERSION = "0.6.3"
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 

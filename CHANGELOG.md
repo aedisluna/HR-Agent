@@ -7,6 +7,20 @@ The project currently uses semantic version numbers for application releases.
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-07-12
+
+### Fixed
+
+- The native launcher bridge selects Python 3.11 instead of the Windows default
+  "py -3" interpreter when no project virtual environment exists.
+- The launcher detects missing backend dependencies before spawning a process and
+  reports an actionable runtime error to the extension.
+
+### Validation
+
+- Added isolated launcher-to-health integration coverage on temporary ports, data,
+  and logs; 43 offline tests pass with 63.7% branch coverage.
+
 ## [0.6.2] - 2026-07-12
 
 ### Added
@@ -20,7 +34,6 @@ The project currently uses semantic version numbers for application releases.
   same-origin iframes and richer field-label recovery.
 - Offline pytest API, ATS, memory-import, native-host, and quality regression
   coverage with a 60% branch-coverage gate.
-- Isolated launcher-to-health integration coverage on temporary ports, data, and logs.
 
 ### Changed
 
@@ -32,10 +45,6 @@ The project currently uses semantic version numbers for application releases.
 
 - Generic ATS form matching now resolves profile identity fields before asking the
   model and leaves unknown or confirmation-required answers for manual review.
-- The native launcher bridge now selects Python 3.11 instead of the Windows default
-  "py -3" interpreter when no project virtual environment exists.
-- The launcher now detects missing backend dependencies before spawning a process and
-  reports an actionable runtime error to the extension.
 
 ### Validation
 
