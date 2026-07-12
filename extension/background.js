@@ -1,6 +1,7 @@
 const API_BASE = "http://127.0.0.1:8001";
 const LAUNCHER_BASE = "http://127.0.0.1:17890";
 const LAUNCHER_CLIENT_HEADER = "X-HR-Agent-Client";
+const NATIVE_HOST_NAME = "com.hr_agent.launcher";
 const EXTENSION_LOG_KEY = "hrAgentExtensionLogs";
 const MAX_EXTENSION_LOGS = 200;
 let extensionLogChain = Promise.resolve();
@@ -51,6 +52,38 @@ function summarizeBody(body) {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === "NATIVE_HOST") {
+    chrome.runtime.sendNativeMessage(
+      NATIVE_HOST_NAME,
+      { action: message.action || "" },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          const error = chrome.runtime.lastError.message;
+          appendExtensionLog({
+            ts: new Date().toISOString().replace("T", " ").slice(0, 19),
+            level: "ERROR",
+            message: "Native launcher bridge failed",
+            meta: { error },
+          });
+          sendResponse({ ok: false, error });
+          return;
+        }
+        if (!response?.ok) {
+          sendResponse({ ok: false, error: response?.error || "Native launcher bridge failed." });
+          return;
+        }
+        appendExtensionLog({
+          ts: new Date().toISOString().replace("T", " ").slice(0, 19),
+          level: "INFO",
+          message: "Native launcher bridge ready",
+          meta: response,
+        });
+        sendResponse({ ok: true, data: response });
+      }
+    );
+    return true;
+  }
+
   if (message.type === "API") {
     const method = message.method || "GET";
     let apiPath;
@@ -204,6 +237,34 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "CLEAR_JOB_CONTEXT") {
     chrome.storage.session.remove("jobContext", () => {
       sendResponse({ ok: true });
+    });
+    return true;
+  }
+
+  if (message.type === "HR_AGENT_BROADCAST") {
+    const tabId = _sender.tab?.id;
+    if (!tabId) {
+      sendResponse([]);
+      return true;
+    }
+
+    chrome.webNavigation.getAllFrames({ tabId }, (frames) => {
+      if (!frames?.length) {
+        sendResponse([]);
+        return;
+      }
+
+      Promise.all(
+        frames.map((frame) =>
+          chrome.tabs
+            .sendMessage(
+              tabId,
+              { type: message.innerType, ...(message.payload || {}) },
+              { frameId: frame.frameId }
+            )
+            .catch(() => null)
+        )
+      ).then((results) => sendResponse(results.filter(Boolean)));
     });
     return true;
   }

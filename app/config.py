@@ -4,7 +4,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 PROMPTS_DIR = PROJECT_ROOT / "prompts"
 
-APP_VERSION = "0.6.1"
+APP_VERSION = "0.6.2"
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 

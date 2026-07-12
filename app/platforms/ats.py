@@ -15,6 +15,7 @@ from app.memory import (
     job_text_hash,
     latest_job_analysis,
 )
+from app.profile import load_candidate_profile
 from app.storage import LearnedAnswer
 
 
@@ -58,6 +59,108 @@ def _match_learned(label: str, learned: list[LearnedAnswer]) -> dict[str, Any] |
             }
 
     return best if best_score >= 2 else None
+
+
+def _split_name(full_name: str) -> tuple[str, str]:
+    parts = full_name.split(None, 1)
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], parts[1]
+
+
+def _match_identity(label: str, profile: dict[str, Any]) -> dict[str, Any] | None:
+    identity = profile.get("identity") or {}
+    preferred = str(identity.get("preferred_name") or "").strip()
+    legal = str(identity.get("legal_name") or "").strip()
+    location = str(identity.get("current_location") or "").strip()
+    email = str(identity.get("email") or "").strip()
+    phone = str(identity.get("phone") or "").strip()
+    telegram = str(identity.get("telegram") or "").strip()
+    linkedin_url = str(identity.get("linkedin_url") or "").strip()
+
+    preferred_first, preferred_last = _split_name(preferred)
+    legal_first, legal_last = _split_name(legal)
+    normalized = _normalize(label)
+
+    rules: list[tuple[tuple[str, ...], str, bool]] = [
+        (
+            ("email address", "e-mail", "email", "почта"),
+            email,
+            False,
+        ),
+        (
+            ("phone number", "mobile phone", "mobile", "phone", "телефон"),
+            phone,
+            False,
+        ),
+        (
+            ("telegram username", "telegram handle", "telegram"),
+            telegram,
+            False,
+        ),
+        (
+            ("linkedin profile", "linkedin url", "linkedin"),
+            linkedin_url,
+            False,
+        ),
+        (
+            ("preferred first name", "preferred name"),
+            preferred_first,
+            False,
+        ),
+        (
+            ("legal first name",),
+            legal_first,
+            False,
+        ),
+        (
+            ("first name", "given name", "forename", "имя"),
+            preferred_first or legal_first,
+            False,
+        ),
+        (
+            ("legal last name",),
+            legal_last,
+            False,
+        ),
+        (
+            ("last name", "family name", "surname", "фамилия"),
+            preferred_last or legal_last,
+            False,
+        ),
+        (
+            ("full name",),
+            preferred or legal,
+            False,
+        ),
+        (
+            (
+                "current location",
+                "your location",
+                "where are you located",
+                "city and state",
+                "city",
+            ),
+            location,
+            False,
+        ),
+    ]
+
+    for patterns, answer, needs_confirmation in rules:
+        if not answer:
+            continue
+        for pattern in patterns:
+            if pattern in normalized or normalized == pattern:
+                return {
+                    "answer": answer,
+                    "confidence": "high",
+                    "needs_confirmation": needs_confirmation,
+                    "source": "profile",
+                }
+
+    return None
 
 
 def _parse_llm_field_answers(
@@ -143,12 +246,15 @@ def map_form_fields(
     url: str | None = None,
 ) -> list[dict[str, Any]]:
     learned = db.query(LearnedAnswer).all()
+    profile = load_candidate_profile()
     questions = [field.get("label") or field.get("name") or field.get("id") or "Field" for field in fields]
     llm_answers: dict[str, dict[str, Any]] = {}
 
     unresolved = []
     for field, question in zip(fields, questions):
         if _is_cover_letter_field(question):
+            continue
+        if _match_identity(question, profile):
             continue
         if not _match_learned(question, learned):
             unresolved.append(question)
@@ -218,7 +324,9 @@ def map_form_fields(
             )
             continue
 
-        matched = _match_learned(question, learned)
+        matched = _match_identity(question, profile)
+        if not matched:
+            matched = _match_learned(question, learned)
         if not matched:
             matched = llm_answers.get(question)
 

@@ -1,4 +1,3 @@
-const LAUNCHER_CMD = "python scripts/launcher.py";
 const EXPECTED_API_MAJOR_MINOR = "0.6";
 
 function apiVersionCompatible(version) {
@@ -7,6 +6,22 @@ function apiVersionCompatible(version) {
 }
 
 window.HrAgentBackend = {
+  async nativeHostRequest(action) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ type: "NATIVE_HOST", action }, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (!response?.ok) {
+          reject(new Error(response?.error || "Local launcher bridge is unavailable."));
+          return;
+        }
+        resolve(response.data);
+      });
+    });
+  },
+
   async launcherRequest(path, options = {}) {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(
@@ -32,21 +47,44 @@ window.HrAgentBackend = {
   },
 
   async getStatus() {
+    let backend = false;
     try {
       const health = await HrAgentApi.health();
-      const versionOk = apiVersionCompatible(health.version);
-      return { backend: versionOk, launcher: true };
+      backend = apiVersionCompatible(health.version);
     } catch (_error) {
+      // The launcher check below determines whether a stopped backend can start.
+    }
+
+    try {
+      const launcherStatus = await this.launcherRequest("/backend-status");
+      return {
+        backend: backend || Boolean(launcherStatus.backend_running),
+        launcher: true,
+      };
+    } catch (_launcherError) {
+      return { backend, launcher: false };
+    }
+  },
+
+  async ensureLauncher() {
+    try {
+      await this.launcherRequest("/health");
+      return;
+    } catch (_error) {
+      // The native host starts the launcher in a detached local process.
+    }
+
+    await this.nativeHostRequest("ensure_launcher");
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
       try {
-        const launcherStatus = await this.launcherRequest("/backend-status");
-        return {
-          backend: Boolean(launcherStatus.backend_running),
-          launcher: true,
-        };
-      } catch (_launcherError) {
-        return { backend: false, launcher: false };
+        await this.launcherRequest("/health");
+        return;
+      } catch (_error) {
+        // wait for the launcher to bind its local port
       }
     }
+    throw new Error("Local launcher did not become ready.");
   },
 
   async startBackend() {
@@ -56,10 +94,7 @@ window.HrAgentBackend = {
     }
 
     if (!status.launcher) {
-      await navigator.clipboard.writeText(LAUNCHER_CMD);
-      throw new Error(
-        "Launcher is offline. Run `python scripts/launcher.py` from the project root (command copied to clipboard), then press Start backend again."
-      );
+      await this.ensureLauncher();
     }
 
     const result = await this.launcherRequest("/start-backend", { method: "POST" });
@@ -82,7 +117,7 @@ window.HrAgentBackend = {
     }
 
     if (!status.launcher) {
-      throw new Error("Launcher is offline. Cannot stop backend from extension.");
+      await this.ensureLauncher();
     }
 
     const result = await this.launcherRequest("/stop-backend", { method: "POST" });
@@ -111,7 +146,7 @@ window.HrAgentBackend = {
       HrAgentPanel.setBackendStatus(
         launcherOk
           ? "Backend offline · open ⋯ More → Start backend"
-          : "Run scripts/launcher.py once, then Start backend",
+          : "Install the local bridge once, then press Start backend",
         true
       );
     }
@@ -122,7 +157,7 @@ window.HrAgentBackend = {
       startButton.classList.toggle("hr-agent-hidden", Boolean(status.backend));
     }
     if (stopButton) {
-      stopButton.classList.toggle("hr-agent-hidden", !status.backend || !status.launcher);
+      stopButton.classList.toggle("hr-agent-hidden", !status.backend);
     }
   },
 

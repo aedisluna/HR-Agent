@@ -82,6 +82,23 @@ window.HrAgentActions = {
       });
       return;
     }
+    if (
+      requestPayload.platform !== "linkedin" &&
+      requestPayload.platform !== "hh"
+    ) {
+      const quality = HrAgentExtractors.assessExternalJobPayload(requestPayload);
+      if (!quality.ok) {
+        HrAgentPanel.setStatus(quality.message, "error");
+        HrAgentLogger.warn("External analyze blocked: invalid job page", {
+          role: requestPayload.role,
+          company: requestPayload.company,
+          job_text_chars: requestPayload.job_text?.length || 0,
+          page_kind: requestPayload.page_kind,
+          url: requestPayload.url,
+        });
+        return;
+      }
+    }
     HrAgentPanel.setStatus("Analyzing vacancy…", "busy");
     HrAgentLogger.info("Analyze started", { platform: requestPayload.platform, url: requestPayload.url });
     try {
@@ -132,7 +149,7 @@ window.HrAgentActions = {
       const memorySuffix = result.analysis_reused ? " · vacancy memory" : "";
       HrAgentPanel.setOutput(cv);
 
-      const fields = this._extractFields(requestPayload);
+      const fields = await this._extractFieldsAsync(requestPayload);
       const inserted = HrAgentFiller.fillCoverLetterFields(fields, cv);
       if (inserted) {
         HrAgentPanel.setStatus(
@@ -155,9 +172,10 @@ window.HrAgentActions = {
     }
   },
 
-  async fillForm(payload, fields, platformLabel) {
+  async fillForm(payload, platformLabel) {
     await this.ensureBackendReady();
     const requestPayload = this._payloadForRequest(payload);
+    const fields = await this._extractFieldsAsync(payload);
     if (!fields.length) {
       HrAgentPanel.setStatus("No form fields detected.");
       HrAgentLogger.warn("Fill form: no fields detected", { platform: platformLabel });
@@ -181,12 +199,24 @@ window.HrAgentActions = {
           title: requestPayload.title,
           company: requestPayload.company,
           role: requestPayload.role,
-          fields: HrAgentExtractors.serializeFields(fields),
+          fields: fields.map(({ id, label, field_type, name, placeholder, required }) => ({
+            id,
+            label,
+            field_type,
+            name,
+            placeholder,
+            required,
+          })),
           use_llm: true,
         })
       );
 
-      const filled = HrAgentFiller.applyMappings(fields, mappings.mappings);
+      const filled =
+        typeof HrAgentFrames !== "undefined" && HrAgentFrames.isTop()
+          ? await HrAgentFrames.applyAllMappings(mappings.mappings)
+          : HrAgentFiller.applyMappings(fields, mappings.mappings);
+      const domFilled = filled.filter((item) => item.filled).length;
+      const domReview = filled.filter((item) => item.answer && !item.filled).length;
       const lines = filled.map((item) => {
         const status = item.filled ? "FILLED" : item.answer ? "REVIEW" : "MISSING";
         return `[${status}] ${item.label}\n${item.answer || ""}`;
@@ -194,7 +224,7 @@ window.HrAgentActions = {
 
       HrAgentPanel.setOutput(lines.join("\n\n"));
       HrAgentPanel.setStatus(
-        `${platformLabel}: ${mappings.auto_fill_count} filled, ${mappings.review_count} to review.`,
+        `${platformLabel}: ${domFilled} filled, ${domReview} to review.`,
         "success"
       );
       await HrAgentQuestions.showFromMappings(mappings.mappings);
@@ -204,8 +234,10 @@ window.HrAgentActions = {
       });
       if (tracked) HrAgentJobCard.applyApplication(tracked);
       HrAgentLogger.info("Fill form finished", {
-        auto_fill: mappings.auto_fill_count,
-        review: mappings.review_count,
+        auto_fill: domFilled,
+        review: domReview,
+        backend_auto_fill: mappings.auto_fill_count,
+        backend_review: mappings.review_count,
       });
     } catch (error) {
       HrAgentLogger.error("Fill form failed", { error: error.message });
@@ -272,7 +304,7 @@ window.HrAgentActions = {
     return {
       analyze: () => this.analyze(payload).catch(onError),
       generateCv: () => this.generateCv(payload).catch(onError),
-      fill: () => this.fillForm(payload, this._extractFields(payload), this._platformLabel(payload)).catch(onError),
+      fill: () => this.fillForm(payload, this._platformLabel(payload)).catch(onError),
       copyOutput: () => this.copyOutput().catch(onError),
       saveContext: async () => {
         await HrAgentApi.saveJobContext(payload);
@@ -303,7 +335,17 @@ window.HrAgentActions = {
     if (payload.platform === "hh") {
       return HrAgentExtractors.extractHhFormFields();
     }
-    return HrAgentExtractors.extractFormFields();
+    return HrAgentExtractors.extractFormFieldsInAllDocuments();
+  },
+
+  async _extractFieldsAsync(payload) {
+    if (payload.platform === "hh") {
+      return HrAgentExtractors.extractHhFormFields();
+    }
+    if (typeof HrAgentFrames !== "undefined" && HrAgentFrames.isTop()) {
+      return HrAgentFrames.extractAllFields();
+    }
+    return HrAgentExtractors.extractFormFieldsInAllDocuments();
   },
 
   _payloadForRequest(payload) {

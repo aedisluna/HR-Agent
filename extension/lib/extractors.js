@@ -125,27 +125,44 @@ window.HrAgentExtractors = {
       return this.extractLinkedInJob().job_text;
     }
 
+    const jsonLd = this.extractJsonLdJobPosting();
+    if (jsonLd?.description) {
+      const description = String(jsonLd.description).replace(/<[^>]+>/g, " ").trim();
+      if (description.length >= 120) return description;
+    }
+
     const selectors = [
-      ".jobs-description__content",
-      "#job-details",
-      ".job-view-layout .jobs-box__html-content",
-      ".vacancy-description",
-      "[data-qa='vacancy-description']",
+      ".job__description",
+      ".job-description",
+      ".job-post",
       ".posting-page",
-      ".content",
+      "[class*='job-description']",
+      "[class*='JobDescription']",
+      "[data-qa='vacancy-description']",
+      ".vacancy-description",
+      "#job-details",
+      ".jobs-description__content",
+      ".job-view-layout .jobs-box__html-content",
     ];
 
     for (const selector of selectors) {
       const element = document.querySelector(selector);
       const text = element?.innerText?.trim();
-      if (text && text.length > 120) return text;
+      if (text && text.length >= 120) return text;
+    }
+
+    if (this.isCareersHubPage()) {
+      return "";
     }
 
     const main = document.querySelector("main, article");
     const mainText = main?.innerText?.trim();
-    if (mainText && mainText.length > 120) return mainText;
+    if (mainText && mainText.length >= 120 && this.isVacancyDetailPage(mainText)) {
+      return mainText;
+    }
 
-    return document.body.innerText.slice(0, 12000).trim();
+    const bodyText = document.body.innerText.slice(0, 12000).trim();
+    return this.isVacancyDetailPage(bodyText) ? bodyText : "";
   },
 
   extractSalary() {
@@ -234,9 +251,363 @@ window.HrAgentExtractors = {
     return fields.length >= 3 && keywordHits >= 1;
   },
 
+  isJobLikePage() {
+    if (this.extractJsonLdJobPosting()) return true;
+    if (this.isVacancyDetailPage()) return true;
+    return false;
+  },
+
+  isMarketingRoleTitle(text) {
+    const normalized = String(text || "").trim().toLowerCase();
+    if (!normalized || normalized.length > 120) return true;
+    const patterns = [
+      /^make a real impact/,
+      /^join (our|the) team/,
+      /^careers$/,
+      /^open roles$/,
+      /^we['’]?re hiring/,
+      /^view open roles/,
+      /heart health\.?$/,
+      /^ready to do the most meaningful work/,
+      /^help thousands of hearts/,
+    ];
+    return patterns.some((pattern) => pattern.test(normalized));
+  },
+
+  isCareersHubPage(text = "") {
+    const body = (text || document.body.innerText || "").toLowerCase();
+    const url = location.href.toLowerCase();
+    const hubMarkers = [
+      "culture and values",
+      "who we are",
+      "view open roles",
+      "our core values",
+      "open roles",
+      "what we do",
+      "for businesses",
+      "for individuals",
+    ];
+    const hubHits = hubMarkers.filter((marker) => body.includes(marker)).length;
+    const onCareersPath = /\/careers\b/.test(url) && !/\/jobs?\//.test(url);
+    const hasGhJobIdOnly = /[?&]gh_jid=/.test(url) && onCareersPath;
+    return hubHits >= 2 || hasGhJobIdOnly || (onCareersPath && hubHits >= 1);
+  },
+
+  isVacancyDetailPage(text = "") {
+    const body = (text || document.body.innerText || "").toLowerCase();
+    if (this.isCareersHubPage(body)) return false;
+
+    const detailMarkers = [
+      "responsibilities",
+      "requirements",
+      "qualifications",
+      "what you'll do",
+      "what you will do",
+      "who you are",
+      "about the role",
+      "about the job",
+      "job description",
+      "обязанности",
+      "требования",
+      "описание вакансии",
+    ];
+    const detailHits = detailMarkers.filter((marker) => body.includes(marker)).length;
+    if (detailHits >= 1) return true;
+
+    const role = this.extractExternalRole();
+    return Boolean(role) && !this.isMarketingRoleTitle(role) && body.length >= 200;
+  },
+
+  assessExternalJobPayload(payload = {}) {
+    const role = payload.role || "";
+    const jobText = payload.job_text || "";
+    const url = payload.url || location.href;
+
+    if (this.isMarketingRoleTitle(role)) {
+      return {
+        ok: false,
+        message:
+          "This looks like a careers landing page, not a specific job. Open the vacancy (e.g. QA Manual Engineer) and analyze again.",
+      };
+    }
+
+    if (this.isCareersHubPage(jobText) || (!jobText && /\/careers\b/.test(url))) {
+      return {
+        ok: false,
+        message:
+          "Careers hub detected. Click into a specific job posting before Analyze.",
+      };
+    }
+
+    if ((jobText || "").length < 200) {
+      return {
+        ok: false,
+        message:
+          "Job description is too short. Open the full vacancy page before Analyze.",
+      };
+    }
+
+    if (!this.isVacancyDetailPage(jobText)) {
+      return {
+        ok: false,
+        message:
+          "Page does not look like a job description. Open the specific vacancy page first.",
+      };
+    }
+
+    return { ok: true, message: "" };
+  },
+
+  normalizeExternalCompany(name) {
+    return String(name || "")
+      .replace(/\s+careers$/i, "")
+      .replace(/\s+jobs$/i, "")
+      .trim();
+  },
+
+  _findJobPostingNode(node) {
+    if (!node || typeof node !== "object") return null;
+    const nodeType = node["@type"];
+    if (nodeType === "JobPosting" || (Array.isArray(nodeType) && nodeType.includes("JobPosting"))) {
+      return node;
+    }
+    if (Array.isArray(node["@graph"])) {
+      for (const item of node["@graph"]) {
+        const found = this._findJobPostingNode(item);
+        if (found) return found;
+      }
+    }
+    return null;
+  },
+
+  extractJsonLdJobPosting() {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (const script of scripts) {
+      try {
+        const parsed = JSON.parse(script.textContent || "null");
+        const nodes = Array.isArray(parsed) ? parsed : [parsed];
+        for (const node of nodes) {
+          const posting = this._findJobPostingNode(node);
+          if (posting) return posting;
+        }
+      } catch (_error) {
+        // ignore invalid JSON-LD blocks
+      }
+    }
+    return null;
+  },
+
+  extractExternalRole() {
+    const jsonLd = this.extractJsonLdJobPosting();
+    if (jsonLd?.title) return String(jsonLd.title).trim();
+
+    const fromSelectors = this.textFromSelectors([
+      "[data-automation='job-title']",
+      "[data-qa='job-title']",
+      ".job-title",
+      ".posting-headline",
+      ".posting-title",
+      ".app-title",
+      "[class*='job-title']",
+      "[class*='JobTitle']",
+      "[class*='posting-title']",
+      "h1",
+    ]);
+
+    if (fromSelectors && !this.isMarketingRoleTitle(fromSelectors)) {
+      return fromSelectors;
+    }
+
+    return "";
+  },
+
+  extractExternalCompany() {
+    const jsonLd = this.extractJsonLdJobPosting();
+    const org = jsonLd?.hiringOrganization;
+    if (typeof org === "string" && org.trim()) {
+      return this.normalizeExternalCompany(org.trim());
+    }
+    if (org?.name) return this.normalizeExternalCompany(String(org.name).trim());
+
+    const ogSite = document.querySelector('meta[property="og:site_name"]')?.content?.trim();
+    if (ogSite) return ogSite;
+
+    const fromSelectors = this.textFromSelectors([
+      "[data-company-name]",
+      "[data-automation='company-name']",
+      ".company-name",
+      ".posting-company",
+      "[class*='company-name']",
+      "[class*='CompanyName']",
+    ]);
+    if (fromSelectors) return this.normalizeExternalCompany(fromSelectors);
+
+    const title = document.title || "";
+    const parts = title.split(/[|\-–—]/).map((part) => part.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const last = parts[parts.length - 1];
+      if (/career|jobs|hiring|recruit|work/i.test(last)) {
+        return this.normalizeExternalCompany(parts[parts.length - 2] || "");
+      }
+      return this.normalizeExternalCompany(last);
+    }
+
+    return "";
+  },
+
+  extractExternalJob(fallback = {}) {
+    const role = this.extractExternalRole();
+    const company = this.extractExternalCompany();
+    const jobText = this.collectJobText();
+    let pageKind = "unknown";
+    if (this.isApplicationLikePage()) {
+      pageKind = "application_form";
+    } else if (this.isVacancyDetailPage(jobText)) {
+      pageKind = "job";
+    } else if (this.isCareersHubPage(jobText)) {
+      pageKind = "careers_hub";
+    }
+
+    return {
+      platform: fallback.platform || "external_ats",
+      url: location.href,
+      title: role || fallback.title || document.title,
+      company: company || fallback.company || "",
+      role: role || fallback.role || "",
+      job_text: this.formatJobTextForAnalysis({
+        role: role || fallback.role || "",
+        company: company || fallback.company || "",
+        job_text: jobText || fallback.job_text || "",
+      }),
+      page_kind: pageKind,
+    };
+  },
+
+  isExtensionElement(element) {
+    return Boolean(element?.closest("#hr-agent-panel"));
+  },
+
+  normalizeFieldLabel(text) {
+    return String(text || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\*+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  },
+
+  isGenericFieldLabel(text) {
+    const normalized = this.normalizeFieldLabel(text);
+    return [
+      "single select",
+      "select one",
+      "choose one",
+      "choose an option",
+      "select",
+      "unknown field",
+    ].includes(normalized);
+  },
+
+  labelFromFieldName(name) {
+    if (!name) return "";
+    const key = String(name)
+      .toLowerCase()
+      .replace(/^job_application\[|\]$/g, "")
+      .split(/[.[\]]/)
+      .filter(Boolean)
+      .pop();
+
+    const known = {
+      first_name: "First Name",
+      last_name: "Last Name",
+      preferred_name: "Preferred First Name",
+      preferred_first_name: "Preferred First Name",
+      email: "Email",
+      phone: "Phone",
+      country: "Country",
+      linkedin_profile: "LinkedIn Profile",
+      linkedin_url: "LinkedIn URL",
+      linkedin: "LinkedIn",
+      website: "Website",
+      cover_letter: "Cover Letter",
+      resume: "Resume",
+      cv: "Resume/CV",
+    };
+
+    if (known[key]) return known[key];
+    return key.replace(/_/g, " ").trim();
+  },
+
+  resolveFieldLabel(element, label) {
+    const resolved = String(label || "").trim();
+    if (!this.isGenericFieldLabel(resolved)) return resolved;
+
+    const question = this.findQuestionText(element);
+    if (question && !this.isGenericFieldLabel(question) && !this.isPlaceholderLabel(question)) {
+      return question;
+    }
+
+    const fromName = this.labelFromFieldName(element.name || element.id);
+    if (fromName && !this.isGenericFieldLabel(fromName)) return fromName;
+
+    return resolved;
+  },
+
+  getAccessibleDocuments() {
+    const docs = [document];
+    document.querySelectorAll("iframe").forEach((iframe) => {
+      try {
+        const doc = iframe.contentDocument;
+        if (doc && !docs.includes(doc)) docs.push(doc);
+      } catch (_error) {
+        // Cross-origin iframe — handled by all_frames content scripts.
+      }
+    });
+    return docs;
+  },
+
+  isKnownFieldLabel(text) {
+    const normalized = this.normalizeFieldLabel(text);
+    if (!normalized) return false;
+
+    const known = [
+      "email",
+      "email address",
+      "phone",
+      "phone number",
+      "mobile",
+      "first name",
+      "last name",
+      "preferred first name",
+      "legal first name",
+      "legal last name",
+      "full name",
+      "country",
+      "city",
+      "location",
+      "linkedin",
+      "linkedin url",
+      "linkedin profile",
+      "telegram",
+      "telegram username",
+      "website",
+      "resume",
+      "cv",
+      "имя",
+      "фамилия",
+      "телефон",
+      "почта",
+      "e-mail",
+    ];
+
+    return known.some(
+      (label) => normalized === label || normalized.startsWith(`${label} `)
+    );
+  },
+
   isPlaceholderLabel(text) {
     if (!text) return true;
-    const normalized = text.trim().toLowerCase();
+    const normalized = this.normalizeFieldLabel(text);
     const placeholders = [
       "писать тут",
       "write here",
@@ -245,8 +616,14 @@ window.HrAgentExtractors = {
       "enter your answer",
       "unknown field",
       "сгенерировать",
+      "application status",
+      "language",
+      "output",
+      "notes about this vacancy",
     ];
-    return placeholders.includes(normalized) || normalized.length < 12;
+    if (placeholders.includes(normalized)) return true;
+    if (this.isKnownFieldLabel(text)) return false;
+    return normalized.length < 12;
   },
 
   isCoverLetterField(label) {
@@ -261,18 +638,22 @@ window.HrAgentExtractors = {
   },
 
   findQuestionText(element) {
-    if (!element) return "";
+    if (!element || this.isExtensionElement(element)) return "";
 
+    const doc = element.ownerDocument || document;
     const aria = element.getAttribute("aria-label");
-    if (aria && !this.isPlaceholderLabel(aria) && !aria.startsWith("task_")) {
-      return aria.trim();
+    if (aria && !aria.startsWith("task_")) {
+      const resolved = this.resolveFieldLabel(element, aria);
+      if (resolved && !this.isPlaceholderLabel(resolved)) {
+        return resolved.trim();
+      }
     }
 
     const labelledBy = element.getAttribute("aria-labelledby");
     if (labelledBy) {
       const labelText = labelledBy
         .split(" ")
-        .map((id) => document.getElementById(id)?.innerText?.trim())
+        .map((id) => doc.getElementById(id)?.innerText?.trim())
         .filter(Boolean)
         .join(" ");
       if (labelText && !this.isPlaceholderLabel(labelText)) return labelText;
@@ -360,6 +741,7 @@ window.HrAgentExtractors = {
 
     const addField = (element, label) => {
       if (!element || element.disabled || element.type === "hidden") return;
+      if (this.isExtensionElement(element)) return;
       const id = element.id || element.name || `field-${fields.length + 1}`;
       if (seen.has(id)) return;
       seen.add(id);
@@ -461,24 +843,43 @@ window.HrAgentExtractors = {
     return fields.slice(0, 40);
   },
 
-  extractFormFields() {
+  extractFormFieldsInAllDocuments() {
+    const fields = [];
+    const seen = new Set();
+
+    for (const doc of this.getAccessibleDocuments()) {
+      for (const field of this.extractFormFieldsFromDocument(doc)) {
+        if (seen.has(field.id)) continue;
+        seen.add(field.id);
+        fields.push(field);
+      }
+    }
+
+    return fields.slice(0, 40);
+  },
+
+  extractFormFieldsFromDocument(rootDoc = document) {
     const fields = [];
     const seen = new Set();
 
     const addField = (element, label) => {
       if (!element || element.disabled || element.type === "hidden") return;
+      if (this.isExtensionElement(element)) return;
+
+      const resolvedLabel = this.resolveFieldLabel(element, label);
+      if (!resolvedLabel || this.isPlaceholderLabel(resolvedLabel)) return;
 
       const id =
         element.id ||
         element.name ||
-        `field-${fields.length + 1}-${label.slice(0, 20).replace(/\s+/g, "-")}`;
+        `field-${fields.length + 1}-${resolvedLabel.slice(0, 20).replace(/\s+/g, "-")}`;
 
       if (seen.has(id)) return;
       seen.add(id);
 
       fields.push({
         id,
-        label: label || element.name || element.id || "Unknown field",
+        label: resolvedLabel.replace(/\s+/g, " ").trim(),
         field_type: element.type || element.tagName.toLowerCase(),
         name: element.name || null,
         placeholder: element.placeholder || null,
@@ -487,13 +888,29 @@ window.HrAgentExtractors = {
       });
     };
 
-    document.querySelectorAll("label").forEach((label) => {
-      const text = label.innerText.trim();
+    rootDoc
+      .querySelectorAll(
+        "#application_form .field, form#application_form .field, .application--form .field, .application-form .field, .question"
+      )
+      .forEach((container) => {
+        const input = container.querySelector(
+          "input:not([type='hidden']), textarea, select"
+        );
+        if (!input) return;
+        const labelNode = container.querySelector("label, legend, .label, h3, h4, p");
+        const label = labelNode?.innerText?.trim() || this.findQuestionText(input);
+        addField(input, label);
+      });
+
+    rootDoc.querySelectorAll("label").forEach((label) => {
+      if (this.isExtensionElement(label)) return;
+
+      const text = label.innerText.trim().replace(/\s+/g, " ");
       const htmlFor = label.getAttribute("for");
       if (!text) return;
 
       if (htmlFor) {
-        const linked = document.getElementById(htmlFor);
+        const linked = rootDoc.getElementById(htmlFor);
         addField(linked, text);
         return;
       }
@@ -502,15 +919,19 @@ window.HrAgentExtractors = {
       addField(nested, text);
     });
 
-    document.querySelectorAll("input, textarea, select").forEach((element) => {
+    rootDoc.querySelectorAll("input, textarea, select").forEach((element) => {
       const aria = element.getAttribute("aria-label");
       const question = this.findQuestionText(element);
-      const label = question || aria || element.name || element.id;
+      const label = this.resolveFieldLabel(element, question || aria || element.name || element.id);
       if (this.isPlaceholderLabel(label)) return;
       addField(element, label);
     });
 
-    return fields.slice(0, 40);
+    return fields;
+  },
+
+  extractFormFields() {
+    return this.extractFormFieldsInAllDocuments();
   },
 
   serializeFields(fields) {

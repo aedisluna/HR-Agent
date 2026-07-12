@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "HR Agent Assistant",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Local job application assistant for LinkedIn, HH.ru and external ATS pages.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": ["storage", "activeTab", "scripting", "webNavigation", "nativeMessaging"],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApAFzZhy7F4dmNrbCwddH1yIBLccnD71lvEkAZVrAp2soKmUZ5CuUwW5c+KBrvVqRa9SCoqoBLbWWk+8CSZovO3HAyg1jMm6yAicxn1uRYicFt/E0pIYuVCRUnMM1iNvCzhVCr18WGwGI+JcHpBTcUeFVaZ7+SbFLxWMc9/ip+rYlie9TByX9XY2TZS+1tdWqgVbasVFLpoTAmny9plrnoQm4cI8zVKPCpgIIlKER0eLD2cbK77gZ+OdRdoiYeduZnO4lsUvYf/TTaHbl5gLGLVwgt/f5bgSP8NkTRIzV8oHOs30T5Vgx8rBeITNyND1s4//PzCDFGSZcvAmvVVa6XwIDAQAB",
   "host_permissions": [
     "http://127.0.0.1:8001/*",
     "http://localhost:8001/*",
@@ -68,6 +69,7 @@
         "lib/api.js",
         "lib/extractors.js",
         "lib/filler.js",
+        "lib/frames.js",
         "lib/panel.js",
         "lib/backend.js",
         "lib/questions.js",
@@ -77,7 +79,8 @@
         "content/ats.js"
       ],
       "css": ["styles/panel.css"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ]
 }

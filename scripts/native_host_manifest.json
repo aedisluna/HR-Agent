@@ -1,0 +1,9 @@
+{
+  "name": "com.hr_agent.launcher",
+  "description": "HR Agent local launcher bridge",
+  "path": "native_host.bat",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://jdbpgjkoggegaojkeaijkcjnopnkjfoa/"
+  ]
+}
