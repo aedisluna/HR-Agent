@@ -7,3 +7,6 @@ python-multipart
 sqlalchemy
 streamlit
 playwright
+pytest
+coverage[toml]
+httpx

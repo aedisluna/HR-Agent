@@ -31,7 +31,8 @@ The workflow is deliberately controlled rather than autonomous: analyze the vaca
 retrieve confirmed evidence, generate the document, run deterministic checks, and
 store the result. The model never receives unrestricted database access.
 
-Launcher service on port **17890** starts/stops the backend from the extension.
+The extension can start and stop the backend itself through a small local bridge on
+port **17890**. No terminal is needed during normal use.
 
 ## Requirements
 
@@ -70,8 +71,22 @@ python scripts/setup_profile_data.py
 
 Then edit `data/candidate_profile.yaml`, `data/resume.md`, `data/standard_answers.yaml`, etc.
 See [data/README.md](data/README.md) for details.
+`data/skill_catalog.yaml` is a local, gitignored list of skill labels and aliases
+used to derive the skills inventory from your profile and resume.
 
-### 4. Start the backend
+### 4. Enable one-click start
+
+Double-click `scripts/install_extension_bridge.bat` once. It registers a local
+Chrome bridge for the current Windows user and does not require administrator
+rights. Reload the extension on `chrome://extensions` after the installer finishes.
+
+Run the installer again after moving the project folder so Chrome receives the new
+local bridge path.
+
+From then on, use **More -> Start backend** in the extension. The launcher and
+backend run without an open console window.
+
+### 5. Start manually (optional)
 
 **Option A — launcher (recommended for extension):**
 
@@ -87,14 +102,14 @@ uvicorn app.main:app --host 127.0.0.1 --port 8001
 
 Verify: http://127.0.0.1:8001/health
 
-### 5. Load the Chrome extension
+### 6. Load the Chrome extension
 
 1. Open `chrome://extensions`
 2. Enable **Developer mode**
 3. **Load unpacked** → select the `extension/` folder
 4. Open a job page on LinkedIn or HH.ru — the HR Agent panel appears on the right
 
-### 6. Seed learned answers (optional)
+### 7. Seed learned answers (optional)
 
 On first backend start, standard answers and confirmed candidate facts are imported
 into SQLite automatically. To refresh file-backed memory after editing YAML or the
@@ -145,6 +160,7 @@ CHANGELOG.md           release history
 | Ollama model | `app/config.py` | `llama3.1-8b-q8-local` |
 | Backend port | `app/main.py` / launcher | `8001` |
 | Launcher port | `scripts/launcher.py` | `17890` |
+| One-click bridge | `scripts/install_extension_bridge.bat` | Windows current user |
 
 ## Vacancy memory workflow
 
@@ -215,11 +231,22 @@ generated document before submitting it.
 
 ## Testing
 
-Offline unit tests do not require Ollama or a running backend:
+Offline unit and integration-style tests do not require Ollama or a running backend:
 
 ```bash
-python -m unittest discover -s tests -v
+python -m pytest
 ```
+
+Measure branch coverage for backend and local launcher code:
+
+```bash
+python -m coverage run -m pytest
+python -m coverage report
+```
+
+The initial branch-coverage gate is 60%, which protects the measured baseline
+from regressions. Raise it after adding API and extension-critical tests; it is
+not a claim that 60% is sufficient coverage.
 
 For an end-to-end check, start the backend and Ollama, then run:
 

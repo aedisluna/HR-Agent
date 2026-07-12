@@ -5,6 +5,38 @@ All notable changes to HR Agent are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 The project currently uses semantic version numbers for application releases.
 
+## [Unreleased]
+
+## [0.6.2] - 2026-07-12
+
+### Added
+
+- Windows local bridge installer for starting the launcher from the Chrome
+  extension. After one double-click installation, **Start backend** no longer
+  requires a terminal command or an open console window.
+- Personal skill labels and aliases now live in a gitignored YAML catalog rather
+  than application source code.
+- Generic ATS extraction and review-only form filling now support accessible
+  same-origin iframes and richer field-label recovery.
+- Offline pytest API, ATS, memory-import, native-host, and quality regression
+  coverage with a 60% branch-coverage gate.
+
+### Changed
+
+- Vacancy analysis now receives a prioritized resume, project, and skills-inventory
+  context, while tailored CV retrieval excludes current-project detail blocks.
+- Browser extension and backend versions are aligned at 0.6.2.
+
+### Fixed
+
+- Generic ATS form matching now resolves profile identity fields before asking the
+  model and leaves unknown or confirmation-required answers for manual review.
+
+### Validation
+
+- 38 offline tests pass with 61.2% branch coverage; the suite uses isolated SQLite
+  databases and mocked LLM boundaries for deterministic assertions.
+
 ## [0.6.1] - 2026-07-11
 
 ### Fixed
