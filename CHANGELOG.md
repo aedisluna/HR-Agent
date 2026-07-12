@@ -31,6 +31,8 @@ The project currently uses semantic version numbers for application releases.
 
 - Generic ATS form matching now resolves profile identity fields before asking the
   model and leaves unknown or confirmation-required answers for manual review.
+- The native launcher bridge now selects Python 3.11 instead of the Windows default
+  "py -3" interpreter when no project virtual environment exists.
 
 ### Validation
 
