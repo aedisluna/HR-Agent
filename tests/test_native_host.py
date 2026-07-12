@@ -1,4 +1,6 @@
 import json
+import os
+import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -30,6 +32,18 @@ class NativeHostTests(unittest.TestCase):
 
         self.assertRegex(launcher, r"(?m)^\s*py -3\.11 ")
         self.assertNotIn('py -3 "%~dp0native_host.py"', launcher)
+
+    @unittest.skipUnless(os.name == "nt", "Windows launcher test")
+    def test_python_311_runtime_has_backend_dependencies(self):
+        result = subprocess.run(
+            ["py", "-3.11", "-c", "import fastapi, uvicorn"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_ensure_launcher_does_not_spawn_duplicate(self):
         with patch("scripts.native_host._launcher_running", return_value=True), patch(

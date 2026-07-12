@@ -98,6 +98,9 @@ window.HrAgentBackend = {
     }
 
     const result = await this.launcherRequest("/start-backend", { method: "POST" });
+    if (result?.status === "runtime_error" || result?.error) {
+      throw new Error(result.error || "Backend runtime is not ready.");
+    }
     for (let attempt = 0; attempt < 15; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       try {

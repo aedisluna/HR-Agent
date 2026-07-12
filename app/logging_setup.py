@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
+import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from app.config import PROJECT_ROOT
 
-LOGS_DIR = PROJECT_ROOT / "logs"
+LOGS_DIR = Path(os.environ.get("HR_AGENT_LOGS_DIR") or PROJECT_ROOT / "logs")
 BACKEND_LOG = LOGS_DIR / "hr-agent.log"
 LAUNCHER_LOG = LOGS_DIR / "launcher.log"
 

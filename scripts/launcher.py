@@ -10,6 +10,8 @@ The browser extension can then start the FastAPI backend via:
 from __future__ import annotations
 
 import json
+import os
+from importlib.util import find_spec
 import subprocess
 import sys
 import urllib.error
@@ -22,11 +24,23 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.config import APP_VERSION
 from app.logging_setup import append_launcher_log
-BACKEND_PORT = 8001
+BACKEND_PORT = int(os.environ.get("HR_AGENT_BACKEND_PORT", "8001"))
 BACKEND_URL = f"http://127.0.0.1:{BACKEND_PORT}"
 BACKEND_HEALTH_URL = f"{BACKEND_URL}/health"
-LAUNCHER_PORT = 17890
+LAUNCHER_PORT = int(os.environ.get("HR_AGENT_LAUNCHER_PORT", "17890"))
 BACKEND_PROCESS: subprocess.Popen | None = None
+_REQUIRED_BACKEND_MODULES = ("uvicorn", "fastapi")
+
+
+def backend_runtime_error() -> str | None:
+    missing = [name for name in _REQUIRED_BACKEND_MODULES if find_spec(name) is None]
+    if not missing:
+        return None
+    return (
+        "Selected Python runtime is missing backend dependencies: "
+        f"{', '.join(missing)}. Use the project .venv or install requirements.txt."
+    )
+
 LAUNCHER_CLIENT_HEADER = "X-HR-Agent-Client"
 LAUNCHER_CLIENT_VALUE = "extension"
 _ALLOWED_ORIGIN_PREFIXES = ("chrome-extension://", "moz-extension://")
@@ -64,6 +78,11 @@ def start_backend() -> dict:
     if backend_running():
         append_launcher_log(f"Backend already running at {BACKEND_URL}")
         return {"status": "already_running", "url": BACKEND_URL}
+
+    runtime_error = backend_runtime_error()
+    if runtime_error:
+        append_launcher_log(f"Backend start unavailable: {runtime_error}")
+        return {"status": "runtime_error", "url": BACKEND_URL, "error": runtime_error}
 
     if BACKEND_PROCESS and BACKEND_PROCESS.poll() is None:
         BACKEND_PROCESS.terminate()
